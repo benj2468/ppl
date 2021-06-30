@@ -165,8 +165,6 @@ listtree_balanced(L, T) :-
 balanced_treesort(T, T1) :-
     treelistAll(T, L),
     listtree_balanced(L, T1).    
-
-
     
     
 
