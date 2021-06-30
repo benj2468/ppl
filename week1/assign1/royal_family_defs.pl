@@ -30,9 +30,11 @@ parent(X, Y) :- child(Y, X).
 
 % X is the aunt of Y
 aunt(X, Y) :- sister(X, P), parent(P, Y).
+aunt(X, Y) :- brother(B, P), parent(P, Y), husband(B, X).
 
 % X is the uncle of Y
-uncle(X, Y) :- sibling(X, P), parent(P, Y), male(X).
+uncle(X, Y) :- brother(X, P), parent(P, Y).
+uncle(X, Y) :- sister(S, P), parent(P, Y), husband(X, S).
 
 % X is the cousin of Y
 cousin(X, Y) :- child(X, P), uncle(P, Y).
@@ -48,6 +50,29 @@ nephew(X, Y) :- uncle(Y, X), male(X).
 % X = pieter_christiaan ;
 % All of the people above are brother's of floris
 
+% ?- sister(X, floris).
+% false
+% Floris has not sisters
+
+% ?- sister(X, beatrix).
+% X = margriet ;
+% X = margriet ;
+% X = margriet ;
+% X = margriet ;
+% X = margriet ;
+% X = irene ;
+% X = christina ;
+% Margriet is listed 5 times because she is considered a female in 5 ways.
+
+% ?- parent(X, floris).
+% X = margriet ;
+% X = pieter ;
+% Margiet and Pieter are FLoris' parents
+
+% ?- parent(floris, X).
+% false.
+% Floris does not have any children, and therefore is not a parent to anyone.
+
 % ?- aunt(X, friso).
 % X = margriet ;
 % X = margriet ;
@@ -58,6 +83,13 @@ nephew(X, Y) :- uncle(Y, X), male(X).
 % X = christina ;
 % We get margriet 5 different times becuase margriet is both a mother to 4 (defining her as a female in 4 ways), and a husband to 1, defining her as a female in a 5th way
 % the fifth 
+
+% ?- uncle(X, floris).
+% X = claus ;
+% X = claus ;
+% X = claus ;
+% X = claus ;
+% Repitition occurs becuase claus is connected to floris through beatrix, who is a female in 4 different ways (female is a requirement when finding a sister)
 
 % ?- nephew(X, margriet).
 % X = alexander ;
@@ -97,3 +129,12 @@ nephew(X, Y) :- uncle(Y, X), male(X).
 % We can make this loop forever by making someone there own parent.
 ancestor(X, Y) :- parent(X, Y), not(X = Y).
 ancestor(X, Y) :- parent(X, Z), ancestor(Z, Y), not(X = Y).
+
+% ?- ancestor(X, margriet).
+% X = juliana ;
+% X = bernhard ;
+% X = emma ;
+% X = wilhelmina ;
+
+% ?- ancestor(floris, X).
+% false.
