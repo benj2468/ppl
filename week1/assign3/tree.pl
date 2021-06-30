@@ -102,70 +102,36 @@ listtree(L,T) :-
     insert(Recursive, Head, T).
 
 treelist(nil,L) :- L = [].
-treelist(T,L) :-
-    T = t(_, N, _),
-    deleteAll(T, N, S),
-    treelist(S, Temp),
-    append(Temp, [N], L).
+treelist(T,Res) :-
+    T = t(L, N, R),
+    deleteAll(L, N, LC),
+    deleteAll(R, N, RC),
+    treelist(LC, LL),
+    treelist(RC, RL),
+    append(LL, [N | RL], Res).
 
 treelistAll(nil, L) :- L = [].
-treelistAll(T, L) :-
-    T = t(_, N, _),
-    deleteOne(T, N, S),
-    treelistAll(S, Temp),
-    append(Temp, [N], L).
+treelistAll(T, Res) :-
+    T = t(L, N, R),
+    treelist(L, LL),
+    treelist(R, RL),
+    append(LL, [N | RL], Res).
 
-% This function translates T1 into T2, removing duplicates and creating a tree of unique nodes
-treesort(T1, T2) :-
-    treelist(T1, L),
-    listtree(L, T2).
+% This function translates L1 into L2, removing duplicates and creating a tree of unique nodes
+treesort(L1, L2) :-
+    listtree(L1, T),
+    treelist(T, L2).
 
-% This function translates T1 into T2, maintaining duplicates
-treesortAll(T1, T2) :-
-    treelistAll(T1, L),
-    listtree(L, T2).
+% This function translates L1 into L2, maintaining duplicates
+treesortAll(L1, L2) :-
+    listtree(L1, T),
+    treelistAll(T, L2).
 
-% Extra
-
-height(nil, H) :- H = 0.
-height(T, H) :-
-    T = t(L, _, R),
-    height(L, HL),
-    height(R, HR),
-    H is max(HL, HR) + 1.
-
-isbalanced(nil).
-isbalanced(T) :-
-    T = t(L, _, R),
-    isbalanced(L),
-    isbalanced(R),
-    height(L, HL),
-    height(R, HR),
-    AbsDiff is abs(HL - HR),
-    AbsDiff =< 1.
-
-partition(List, L, M, R) :-
-	append(L, [M], Left),
-    append(Left, R, List),
-    length(L, LL),
-    length(R, LR),
-    AbsDiff is abs(LL - LR),
-    AbsDiff =< 1.
-    
-
-listtree_balanced([],T) :- T = nil.
-listtree_balanced(L, T) :-
-	sort(L, Sorted), % O(nlgn)
-    partition(Sorted, PL, M, PR),
-	listtree_balanced(PL, TL),
-    listtree_balanced(PR, TR),
-    T = t(TL, M, TR).
-    
-
-balanced_treesort(T, T1) :-
-    treelistAll(T, L),
-    listtree_balanced(L, T1).    
-    
-    
-
-
+% TESTING
+% % The treesort does not maintain duplicates
+% treesort([9,8,7,6,5,4,3,2,2], L)
+% L = [2, 3, 4, 5, 6, 7, 8, 9]
+% 
+% % The treesortAll maintains duplicates
+% treesortAll([9,8,7,6,5,4,3,2,2], L)
+% L = [2, 2, 3, 4, 5, 6, 7, 8, 9]
