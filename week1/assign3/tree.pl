@@ -136,14 +136,11 @@ treesortAll(L1, L2) :-
 
 % TESTING
 % % The treesort does not maintain duplicates
-% treesort([9,8,7,6,5,4,3,2,2], L)
-% L = [2, 3, 4, 5, 6, 7, 8, 9]
-% ?- treesort([6,5,3,8,5,5,3,2,7,6,5,9], L).
-% L = [2, 3, 5, 6, 7, 8, 9] ;
+:- treesort([9,8,7,6,5,4,3,2,2], [2, 3, 4, 5, 6, 7, 8, 9]).
+:- treesort([6,5,3,8,5,5,3,2,7,6,5,9], [2, 3, 5, 6, 7, 8, 9]).
 % 
 % % The treesortAll maintains duplicates
-% treesortAll([9,8,7,6,5,4,3,2,2], L)
-% L = [2, 2, 3, 4, 5, 6, 7, 8, 9]
+:- treesortAll([9,8,7,6,5,4,3,2,2], [2, 2, 3, 4, 5, 6, 7, 8, 9]).
 
 % treesort doesn't retain duplicates becuase treelist(T, L) uses deleteAll when we remove the root node and add it to the list
 % treesortAll retains multiples becuase it only removes the root node, not the remaining nodes. 

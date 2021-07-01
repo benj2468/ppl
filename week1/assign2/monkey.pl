@@ -75,3 +75,6 @@ solve(State) :- move(State, _, State2), solve(State2).
 
 solve(State, L) :- goal(State), L = [].
 solve(State, L) :- move(State, M, State2), append(L2, [M], L), solve(State2, L2).
+
+:- init(S), solve(S).
+:- init(S), solve(S, [grasp, climb, walk(atwindow, middle), push(atwindow, middle), walk(middle, atwindow), walk(atdoor, middle)]).
