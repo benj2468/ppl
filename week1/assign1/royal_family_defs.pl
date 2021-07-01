@@ -1,7 +1,7 @@
 /*  
     File: royal_family_defs.pl
     Purpose: Assignment 1
-    
+    Author: Benjamin Cape
 */
 
 :- [royal_family_facts].
