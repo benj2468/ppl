@@ -6,28 +6,25 @@
 
 
 istree(nil).
-istree(T) :- T = t(L, _, R), istree(L), istree(R).
+istree(t(L, _, R)) :-istree(L), istree(R).
 
-max(T,N) :- T = t(_, N, nil).
-max(T,N) :- T = t(_, _, R), max(R, N).
+max(t(_, N, nil),N).
+max(t(_, _, R),N) :- max(R, N).
 
-min(T, N) :- T = t(nil, N, _).
-min(T, N) :- T = t(L, _, _), min(L, N).
+min(t(nil, N, _), N).
+min(t(L, _, _), N) :- min(L, N).
 
 issorted(nil).
 issorted(t(nil, _, nil)).
-issorted(T) :-
-    T = t(L, N, nil),
+issorted(t(L, N, nil)) :-
     issorted(L),
     max(L, N1),
     N1 =< N.
-issorted(T) :-
-    T = t(nil, N, R),
+issorted(t(nil, N, R)) :-
     issorted(R),
     min(R, N2),
     N =< N2.
-issorted(T) :- 
-    T = t(L, N, R),
+issorted(t(L, N, R)) :- 
     issorted(L),
     issorted(R),
     max(L, N1),
@@ -36,20 +33,17 @@ issorted(T) :-
 	N =< N2.
 
 
-find(T, N, S) :- T = t(_, N, _), S = T.
-find(T, N, S) :- 
-    T = t(L, NotS, _),
+find(t(L, N, R), N, t(L, N, R)).
+find(t(L, NotS, _), N, S) :- 
     not(NotS = N),
     find(L, N, S).
-find(T, N, S) :- 
-    T = t(_, NotS, R),
+find(t(_, NotS, R), N, S) :- 
     not(NotS = N),
     find(R, N, S).
 
 % What should happen if the value already exists?
-insert(nil, N, S) :- S = t(nil, N, nil).
-insert(T, N, S) :-
-    T = t(L, V, R),
+insert(nil, N, t(nil, N, nil)).
+insert(t(L, V, R), N, S) :-
     (N =< V -> 
     	insert(L, N, SL),
         S = t(SL, V, R)
@@ -57,10 +51,9 @@ insert(T, N, S) :-
     	insert(R, N, SR),
     	S = t(L, V, SR)).
 
-insertTree(T, nil, S) :- S = T.
-insertTree(nil, T, S) :- S = T.
-insertTree(T, I, S) :-
-	T = t(L, V, R),
+insertTree(T, nil, T).
+insertTree(nil, T, T).
+insertTree(t(L, V, R), I, S) :-
     I = t(_, IV, _),
     (IV =< V ->
     	insertTree(L, I, New),
@@ -69,18 +62,10 @@ insertTree(T, I, S) :-
     	insertTree(R, I, New),
         S = t(L, V, New)).
 
-deleteOne(T, N, S) :-
-    T = t(L, N, nil),
-   	S = L.
-deleteOne(T, N, S) :-
-    T = t(L, N, R),
-   	R = t(RL, RN, RR),
-    NewTree = t(L, RN, RR),
-    insertTree(NewTree, RL, Res),
-    S = Res.
-
-deleteOne(T, N, S) :-
-    T = t(L, V, R),
+deleteOne(t(L, N, nil), N, L).
+deleteOne(t(L, N, t(RL, RN, RR)), N, S) :-
+    insertTree(t(L, RN, RR), RL, S).
+deleteOne(t(L, V, R), N, S) :-
     (N < V -> 
     	deleteOne(L, N, SL),
         S = t(SL, V, R)
@@ -93,33 +78,27 @@ deleteAll(T, N, S) :-
     T = t(_, N, _),
     deleteOne(T, N, OneRemoved),
     deleteAll(OneRemoved, N, S).
-deleteAll(nil, _, S) :- S = nil.
-deleteAll(T, N, S) :-
-    T = t(L, V, R),
-    not(V = N),
+deleteAll(nil, _, nil).
+deleteAll(t(L, V, R), N, t(SL, V, SR)) :-
     deleteAll(L, N, SL),
-    deleteAll(R, N, SR),
-	S = t(SL, V, SR).
+    deleteAll(R, N, SR).
 
-listtree([N], T) :-
-    T = t(nil, N, nil).
-listtree(L,T) :-
-	L = [Head | Tail],
+
+listtree([N], t(nil, N, nil)).
+listtree([Head | Tail],T) :-
     listtree(Tail, Recursive),
     insert(Recursive, Head, T).
 
-treelist(nil,L) :- L = [].
-treelist(T,Res) :-
-    T = t(L, N, R),
+treelist(nil,[]).
+treelist(t(L, N, R),Res) :-
     deleteAll(L, N, LC),
     deleteAll(R, N, RC),
     treelist(LC, LL),
     treelist(RC, RL),
     append(LL, [N | RL], Res).
 
-treelistAll(nil, L) :- L = [].
-treelistAll(T, Res) :-
-    T = t(L, N, R),
+treelistAll(nil, []).
+treelistAll(t(L, N, R), Res) :-
     treelist(L, LL),
     treelist(R, RL),
     append(LL, [N | RL], Res).
