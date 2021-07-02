@@ -4,9 +4,9 @@
     Author: Benjamin Cape
 */
 
-goal(State) :- State = state(_, _, _, has).
+goal(state(_, _, _, has)).
 
-init(State) :- State = state(atdoor, onfloor, atwindow, hasnot).
+init(state(atdoor, onfloor, atwindow, hasnot)).
 
 % This is the ideal wining move set
 % init - atdoor, onfloor, atwindow, hasnot
