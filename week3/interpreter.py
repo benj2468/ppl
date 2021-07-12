@@ -151,6 +151,8 @@ def interpreter(program,toBeInterpreted):
                     val1 = value[arg1]
                     val2 = value[arg2]
                     storeInMemory(command, (val1, val2))
+        else:
+            exception("Unsupported syntax line. Only Expressions and Assignments permitted", line)
 
 
 
