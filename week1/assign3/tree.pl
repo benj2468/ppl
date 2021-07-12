@@ -52,7 +52,7 @@ insert(t(L, V, R), N, S) :-
     	S = t(L, V, SR)).
 
 insertTree(T, nil, T).
-insertTree(nil, T, T).
+insertTree(nil, T, T).  
 insertTree(t(L, V, R), I, S) :-
     I = t(_, IV, _),
     (IV =< V ->
@@ -74,11 +74,11 @@ deleteOne(t(L, V, R), N, S) :-
     	S = t(L, V, SR)).
 
 
+deleteAll(nil, _, nil).
 deleteAll(T, N, S) :-
     T = t(_, N, _),
     deleteOne(T, N, OneRemoved),
     deleteAll(OneRemoved, N, S).
-deleteAll(nil, _, nil).
 deleteAll(t(L, V, R), N, t(SL, V, SR)) :-
     deleteAll(L, N, SL),
     deleteAll(R, N, SR).
