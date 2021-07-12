@@ -104,6 +104,11 @@ def interpreter(program,toBeInterpreted):
                 joinOn = parseArgument(expr.slice.value.elts[0])
                 values = getExpressionValue(expr.slice.value.elts[1])
                 return [joinPair(joinOn,pair) for pair in values]
+            elif nm=='WHERE':
+                restriction = getExpressionValue(expr.slice.value.elts[0])
+                (name, args) = parseAtom(expr.slice.value.elts[1])
+                pairs = getFromStorage(name,args,restriction)
+                return pairs
             else:
                 args = [parseArgument(arg) for arg in expr.slice.value.elts]
                 pairs = getFromStorage(nm,args)
@@ -116,6 +121,14 @@ def interpreter(program,toBeInterpreted):
                 return [v for vs in ret['args'] for v in vs]
             else:
                 exception(f"Unknown operator: {expr.op}",expr)
+        elif isinstance(expr, ast.Compare):
+            if isinstance(expr.ops[0], ast.Is):
+                variable = expr.left.value
+                value = expr.comparators[0].value
+                restriction = {variable: value}
+                return restriction
+            else:
+                exception("Can only interpret `is` comparators",expr)
         else:
             exception("Unexpected expression",expr)
     
@@ -124,12 +137,20 @@ def interpreter(program,toBeInterpreted):
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
     memory = {}
 
-    def getFromStorage(key, args):
+    def getFromStorage(key, args, restrictions = {}):
         [var1, var2] = args
+        restriction1 = restrictions[var1] if var1 in restrictions else None
+        restriction2 = restrictions[var2] if var2 in restrictions else None
         res = []
         values = memory[key]
         for (arg1, arg2) in values:
-            res.append({var1: arg1, var2: arg2})
+            canAdd = True
+            if restriction1 and arg1 != restriction1:
+                canAdd = False
+            if restriction2 and arg2 != restriction2:
+                canAdd = False
+            if canAdd:
+                res.append({var1: arg1, var2: arg2})
 
         return res
 

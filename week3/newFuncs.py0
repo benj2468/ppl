@@ -11,8 +11,9 @@
 PRINT["Hello","World!"]
 
 book["Benjamin", "The Book of Time"]
+book["Noah", "The Book of Time"]
 UPDATE[book["Benjamin", "The Book of Time"], book["Benjamin", "The Book of Space"]]
-PRINT[1, 2] = book[1, 2]
+PRINT[1, 2] = WHERE[1 is "Noah", book[1, 2]]
 
 CLEAR[book]
 book["Benjamin", "The Book of Time"]
