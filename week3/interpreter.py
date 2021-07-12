@@ -3,6 +3,8 @@ import sys
 import os
 
 PRINT_COMMAND = "PRINT"
+UPDATE_COMMAND = "UPDATE"
+CLEAR_ACTION = "CLEAR"
 
 def interpreter(program,toBeInterpreted):
     """ interpreter(programString,toBeInterpreted)
@@ -35,12 +37,21 @@ def interpreter(program,toBeInterpreted):
     # parseAtom parses things like foo[1,"Bla"]
     # parseArgument parses the 1 and "Bla" within that.
     # These functions do some rudamentary checks to see if the syntax is okay
+    def parseAction(atom):
+        if isinstance(atom, ast.Subscript) and isinstance(atom.value, ast.Name):
+            name = atom.value.id
+            if isinstance(atom.slice.value, ast.Name):
+                return (name, atom.slice.value.id)
+            else:
+                exception("Expecting an identifier", atom)
+        else:
+            exception("Not a valid atom, expecting action[name] syntax.", atom)
     def parseAtom(atom):
         if isinstance(atom, ast.Subscript) and isinstance(atom.value, ast.Name):
             name = atom.value.id
             if isinstance(atom.slice.value, ast.Tuple):
                 args=[parseArgument(argument) for argument in atom.slice.value.elts]
-                return name, args
+                return name, (args[0], args[1])
             else:
                 exception("Expecting two arguments to every atom", atom)
         else:
@@ -57,6 +68,8 @@ def interpreter(program,toBeInterpreted):
         elif isinstance(argument, ast.Name):
             # The following might become acceptable at some point, so let's give it a different looking exception
             exception(f"Expecting to see quotes around {ast.Name.id}")
+        elif isinstance(argument, ast.Subscript):
+            return parseAtom(argument)
         else:
             exception("Not a valid argument to an atom, this must be a simple python constant",argument)
     
@@ -125,19 +138,35 @@ def interpreter(program,toBeInterpreted):
             memory[key] = set()
         memory[key].add(entry)
 
+    def removeFromMemory(key, entry):
+        memory[key].remove(entry)
+
+    def clearMemory(key):
+        del memory[key]
+
+    def updateMemory(key, diff):
+        (start, end) = diff
+        removeFromMemory(*start)
+        storeInMemory(*end)
+
     def printA(arg1, arg2):
         val = arg1
         val += f" # {arg2}" if arg2 else ''
         print(val)
-        
 
     for line in toBeInterpreted.body:
         if isinstance(line, ast.Expr):
-            [command, [arg1, arg2]] = parseAtom(line.value)
-            if command == PRINT_COMMAND:
-                printA(arg1, arg2)
-            else:
-                storeInMemory(command, (arg1, arg2))
+            try:
+                [command, args] = parseAtom(line.value)
+                if command == PRINT_COMMAND:
+                    printA(*args)
+                if command == UPDATE_COMMAND:
+                    updateMemory(command, args)
+                else:
+                    storeInMemory(command, args)
+            except:
+                [command, name] = parseAction(line.value)
+                clearMemory(name)
         elif isinstance(line, ast.Assign):
             [command, [arg1, arg2]] = parseAtom(line.targets[0])
             values = getExpressionValue(line.value)
@@ -146,6 +175,8 @@ def interpreter(program,toBeInterpreted):
                     val1 = value[arg1]
                     val2 = value[arg2]
                     printA(val1, val2)
+            if command == UPDATE_COMMAND:
+                exception("Cannot perform update comand dynamically yet")
             else:
                 for value in values:
                     val1 = value[arg1]

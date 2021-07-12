@@ -1,0 +1,20 @@
+# This is not python code, it is our own little code
+# but it looks (very vaguely) like python code
+# only because we wish to use the python parser.
+
+# PRINT[A,B] is used to print output
+#    In general, PRINT[A,B] will print:
+#    A # B
+#    For this specific line, that means:
+#    "Hello" # "World!"
+# In this language, we can only print two things at a time
+PRINT["Hello","World!"]
+
+book["Benjamin", "The Book of Time"]
+UPDATE[book["Benjamin", "The Book of Time"], book["Benjamin", "The Book of Space"]]
+PRINT[1, 2] = book[1, 2]
+
+CLEAR[book]
+book["Benjamin", "The Book of Time"]
+
+PRINT[1, 2] = book[1, 2]
