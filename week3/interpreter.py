@@ -2,6 +2,8 @@ import ast
 import sys
 import os
 
+PRINT_COMMAND = "PRINT"
+
 def interpreter(program,toBeInterpreted):
     """ interpreter(programString,toBeInterpreted)
         Runs the ast given by 'toBeInterpreted'.
@@ -14,7 +16,7 @@ def interpreter(program,toBeInterpreted):
     def exception(message, structure):
         """ Display an error message on some ast structure """
         if(debug):
-            printf(f'Exception ({message}) raised on:\n{structure}')
+            print(f'Exception ({message}) raised on:\n{structure}')
         original = ast.get_source_segment(program, structure, padded=True)
         if (structure.lineno == structure.end_lineno):
             if (structure.col_offset+2 >= structure.end_col_offset):
@@ -107,8 +109,50 @@ def interpreter(program,toBeInterpreted):
     # TODO: This is where the code to your interpreter goes.
     # Note that you already have a function 'getExpressionValue' built for you
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
-    setupMemory()
-    iterateOverCode()
+    memory = {}
+
+    def getFromStorage(key, args):
+        [var1, var2] = args
+        res = []
+        values = memory[key]
+        for (arg1, arg2) in values:
+            res.append({var1: arg1, var2: arg2})
+
+        return res
+
+    def storeInMemory(key, entry):
+        if not key in memory:
+            memory[key] = set()
+        memory[key].add(entry)
+
+    def printA(arg1, arg2):
+        val = arg1
+        val += f" # {arg2}" if arg2 else ''
+        print(val)
+        
+
+    for line in toBeInterpreted.body:
+        if isinstance(line, ast.Expr):
+            [command, [arg1, arg2]] = parseAtom(line.value)
+            if command == PRINT_COMMAND:
+                printA(arg1, arg2)
+            else:
+                storeInMemory(command, (arg1, arg2))
+        elif isinstance(line, ast.Assign):
+            [command, [arg1, arg2]] = parseAtom(line.targets[0])
+            values = getExpressionValue(line.value)
+            if command == PRINT_COMMAND:
+                for value in values:
+                    val1 = value[arg1]
+                    val2 = value[arg2]
+                    printA(val1, val2)
+            else:
+                for value in values:
+                    val1 = value[arg1]
+                    val2 = value[arg2]
+                    storeInMemory(command, (val1, val2))
+
+
 
 # Run the interpreter if we are using this from the command line
 # The next line checks if we are running this from the command line (and not loading this file as a module)
