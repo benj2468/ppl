@@ -5,6 +5,7 @@ import os
 PRINT_COMMAND = "PRINT"
 UPDATE_COMMAND = "UPDATE"
 CLEAR_ACTION = "CLEAR"
+LOOP_ACTION = "LOOP"
 
 def interpreter(program,toBeInterpreted):
     """ interpreter(programString,toBeInterpreted)
@@ -136,6 +137,7 @@ def interpreter(program,toBeInterpreted):
     # Note that you already have a function 'getExpressionValue' built for you
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
     memory = {}
+    loop_state = {}
 
     def getFromStorage(key, args, restrictions = {}):
         [var1, var2] = args
@@ -175,14 +177,24 @@ def interpreter(program,toBeInterpreted):
         val += f" # {arg2}" if arg2 else ''
         print(val)
 
-    for line in toBeInterpreted.body:
+    def startLoop(start, iterations, lines):
+        loop_state["start_line"] = start
+        loop_state["end_line"] = start + lines - 1
+        loop_state["remaining_iterations"] = iterations - 1
+        
+    program_counter = 0
+    lines = toBeInterpreted.body
+    while program_counter < len(lines):
+        line = lines[program_counter]
         if isinstance(line, ast.Expr):
             try:
                 [command, args] = parseAtom(line.value)
                 if command == PRINT_COMMAND:
                     printA(*args)
-                if command == UPDATE_COMMAND:
+                elif command == UPDATE_COMMAND:
                     updateMemory(command, args)
+                elif command == LOOP_ACTION:
+                    startLoop(program_counter + 1, *args)
                 else:
                     storeInMemory(command, args)
             except:
@@ -205,6 +217,16 @@ def interpreter(program,toBeInterpreted):
                     storeInMemory(command, (val1, val2))
         else:
             exception("Unsupported syntax line. Only Expressions and Assignments permitted", line)
+
+        if len(loop_state) == 0:
+            program_counter += 1
+        elif program_counter == loop_state["end_line"] and loop_state["remaining_iterations"]:
+            program_counter = loop_state["start_line"]
+            loop_state["remaining_iterations"] -= 1
+        elif program_counter < loop_state["end_line"] or not loop_state["remaining_iterations"]:
+            program_counter += 1
+
+        
 
 
 
