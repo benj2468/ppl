@@ -105,8 +105,8 @@ def interpreter(program,toBeInterpreted):
                 values = getExpressionValue(expr.slice.value.elts[1])
                 return [joinPair(joinOn,pair) for pair in values]
             elif nm=='WHERE':
-                restriction = getExpressionValue(expr.slice.value.elts[0])
-                (name, args) = parseAtom(expr.slice.value.elts[1])
+                (name, args) = parseAtom(expr.slice.value.elts[0])
+                restriction = getExpressionValue(expr.slice.value.elts[1])
                 pairs = getFromStorage(name,args,restriction)
                 return pairs
             else:
