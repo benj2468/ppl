@@ -6,6 +6,7 @@ PRINT_COMMAND = "PRINT"
 UPDATE_COMMAND = "UPDATE"
 CLEAR_ACTION = "CLEAR"
 LOOP_ACTION = "LOOP"
+WHILE_COMMAND = "WHILE"
 
 def interpreter(program,toBeInterpreted):
     """ interpreter(programString,toBeInterpreted)
@@ -43,6 +44,10 @@ def interpreter(program,toBeInterpreted):
             name = atom.value.id
             if isinstance(atom.slice.value, ast.Name):
                 return (name, atom.slice.value.id)
+            elif isinstance(atom.slice.value, ast.Tuple):
+                expresion = getExpressionValue(atom.slice.value.elts[0])
+                iterations = parseAtom(atom.slice.value.elts[1])
+                return (name, (expresion, iterations))
             else:
                 exception("Expecting an identifier", atom)
         else:
@@ -73,6 +78,14 @@ def interpreter(program,toBeInterpreted):
             return parseAtom(argument)
         else:
             exception("Not a valid argument to an atom, this must be a simple python constant",argument)
+
+    def parseWhile(line):
+        if isinstance(line, ast.Subscript):
+            if isinstance(line.slice.value, ast.Tuple):
+                return line.slice.value.elts[0]
+
+    def checkWhile(condition):
+        return bool(getExpressionValue(condition))
     
     # The main workhorse here is the code to compute the value of an expression
     # That function is getExpressionValue
@@ -144,6 +157,8 @@ def interpreter(program,toBeInterpreted):
         restriction1 = restrictions[var1] if var1 in restrictions else None
         restriction2 = restrictions[var2] if var2 in restrictions else None
         res = []
+        if not key in memory: return []
+
         values = memory[key]
         for (arg1, arg2) in values:
             canAdd = True
@@ -178,10 +193,18 @@ def interpreter(program,toBeInterpreted):
         print(val)
 
     def startLoop(start, iterations, lines):
+        if "condition" in loop_state: del loop_state["condition"]
         loop_state["start_line"] = start
         loop_state["end_line"] = start + lines - 1
         loop_state["remaining_iterations"] = iterations - 1
-        
+
+    def startWhile(line, start, lines):
+        condition = parseWhile(line)
+        if "remaining_iterations" in loop_state: del loop_state["remaining_iterations"]
+        loop_state["start_line"] = start
+        loop_state["end_line"] = start + lines - 1
+        loop_state["condition"] = condition
+
     program_counter = 0
     lines = toBeInterpreted.body
     while program_counter < len(lines):
@@ -195,11 +218,15 @@ def interpreter(program,toBeInterpreted):
                     updateMemory(command, args)
                 elif command == LOOP_ACTION:
                     startLoop(program_counter + 1, *args)
+                elif command == WHILE_COMMAND:
+                    startWhile(line.value, program_counter + 1, args[1])
                 else:
                     storeInMemory(command, args)
             except:
                 [command, name] = parseAction(line.value)
-                clearMemory(name)
+                
+                if command == CLEAR_ACTION:
+                    clearMemory(name)
         elif isinstance(line, ast.Assign):
             [command, [arg1, arg2]] = parseAtom(line.targets[0])
             values = getExpressionValue(line.value)
@@ -220,11 +247,23 @@ def interpreter(program,toBeInterpreted):
 
         if len(loop_state) == 0:
             program_counter += 1
-        elif program_counter == loop_state["end_line"] and loop_state["remaining_iterations"]:
-            program_counter = loop_state["start_line"]
-            loop_state["remaining_iterations"] -= 1
-        elif program_counter < loop_state["end_line"] or not loop_state["remaining_iterations"]:
-            program_counter += 1
+            continue
+        elif program_counter == loop_state["end_line"]:
+            if "remaining_iterations" in loop_state:
+                if loop_state["remaining_iterations"]:
+                    program_counter = loop_state["start_line"]
+                    loop_state["remaining_iterations"] -= 1
+                else:
+                    program_counter += 1
+                continue
+            elif "condition" in loop_state:
+                if checkWhile(loop_state["condition"]):
+                    program_counter = loop_state["start_line"]
+                else:
+                    program_counter += 1
+                continue
+        program_counter += 1
+            
 
         
 
