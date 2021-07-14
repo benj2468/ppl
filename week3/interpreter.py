@@ -210,7 +210,7 @@ def interpreter(program,toBeInterpreted):
             val1 = value[arg1]
             val2 = value[arg2]
             return (val1, val2)
-        finally:
+        except:
             raise(RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
 
     program_counter = 0
