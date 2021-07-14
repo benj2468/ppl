@@ -205,6 +205,14 @@ def interpreter(program,toBeInterpreted):
         loop_state["end_line"] = start + lines - 1
         loop_state["condition"] = condition
 
+    def extractValues(value, arg1, arg2):
+        try:
+            val1 = value[arg1]
+            val2 = value[arg2]
+            return (val1, val2)
+        finally:
+            raise(RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
+
     program_counter = 0
     lines = toBeInterpreted.body
     while program_counter < len(lines):
@@ -232,16 +240,12 @@ def interpreter(program,toBeInterpreted):
             values = getExpressionValue(line.value)
             if command == PRINT_COMMAND:
                 for value in values:
-                    val1 = value[arg1]
-                    val2 = value[arg2]
-                    printA(val1, val2)
+                    printA(*extractValues(value, arg1, arg2))
             if command == UPDATE_COMMAND:
                 exception("Cannot perform update comand dynamically yet")
             else:
                 for value in values:
-                    val1 = value[arg1]
-                    val2 = value[arg2]
-                    storeInMemory(command, (val1, val2))
+                    storeInMemory(command, extractValues(value, arg1, arg2))
         else:
             exception("Unsupported syntax line. Only Expressions and Assignments permitted", line)
 
