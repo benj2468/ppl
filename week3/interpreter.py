@@ -5,42 +5,72 @@ import os
 PRINT_COMMAND = "PRINT"
 UPDATE_COMMAND = "UPDATE"
 CLEAR_ACTION = "CLEAR"
-LOOP_ACTION = "LOOP"
-WHILE_COMMAND = "WHILE"
+CHANGE_ACTION = "CHANGE"
 
-def interpreter(program,toBeInterpreted):
+
+def interpreter(program, toBeInterpreted):
     """ interpreter(programString,toBeInterpreted)
         Runs the ast given by 'toBeInterpreted'.
         The programString is used to construct readable error messages.
         If the program runs successfully, programString is not used. """
+    class Loop:
+        def __init__(self, program_counter, line):
+
+            self.start = program_counter
+            self.end = self.start + len(line.body) - 1
+            self.condition = line.test
+            self.line = line
+            self.should_loop()
+
+        def check(self, program_counter):
+            if program_counter == self.end:
+                return self.should_loop()
+            else:
+                return False
+
+        def should_loop(self):
+            command, key = parseAction(self.condition)
+            if command == CHANGE_ACTION:
+                try:
+                    changed = len(self.state.difference(memory[key])) or len(
+                        memory[key].difference(self.state))
+                    self.state = memory[key].copy()
+                    return changed
+                except:
+                    self.state = memory[key].copy()
+                    return True
+            return False
+
     # program is the original source code (used for error messages),
     # toBeInterpreted is the parsed structure that we'll work on.
 
     # The 'exception' is to be used if the .py0 program has an error:
     def exception(message, structure):
         """ Display an error message on some ast structure """
-        if(debug):
+        if (debug):
             print(f'Exception ({message}) raised on:\n{structure}')
         original = ast.get_source_segment(program, structure, padded=True)
         if (structure.lineno == structure.end_lineno):
-            if (structure.col_offset+2 >= structure.end_col_offset):
+            if (structure.col_offset + 2 >= structure.end_col_offset):
                 colpos = f"{structure.col_offset}"
             else:
                 colpos = f"{structure.col_offset} - {structure.end_col_offset}"
             posInfo = f"On line {structure.lineno}:{colpos}"
         else:
             posInfo = f"On lines {structure.lineno}:{structure.col_offset} to {structure.end_lineno}:{structure.end_col_offset}"
-        if original == None :
-            raise(RuntimeError(f"{message}:\n{ast.unparse(structure)}\n{posInfo}"))
-        else :
-            raise(RuntimeError(f"{message}:\n{original}\n{posInfo}"))
-    
+        if original == None:
+            raise (RuntimeError(
+                f"{message}:\n{ast.unparse(structure)}\n{posInfo}"))
+        else:
+            raise (RuntimeError(f"{message}:\n{original}\n{posInfo}"))
+
     # Some parsing helper functions:
     # parseAtom parses things like foo[1,"Bla"]
     # parseArgument parses the 1 and "Bla" within that.
     # These functions do some rudamentary checks to see if the syntax is okay
     def parseAction(atom):
-        if isinstance(atom, ast.Subscript) and isinstance(atom.value, ast.Name):
+        if isinstance(atom, ast.Subscript) and isinstance(
+                atom.value, ast.Name):
             name = atom.value.id
             if isinstance(atom.slice.value, ast.Name):
                 return (name, atom.slice.value.id)
@@ -52,16 +82,23 @@ def interpreter(program,toBeInterpreted):
                 exception("Expecting an identifier", atom)
         else:
             exception("Not a valid atom, expecting action[name] syntax.", atom)
+
     def parseAtom(atom):
-        if isinstance(atom, ast.Subscript) and isinstance(atom.value, ast.Name):
+        if isinstance(atom, ast.Subscript) and isinstance(
+                atom.value, ast.Name):
             name = atom.value.id
             if isinstance(atom.slice.value, ast.Tuple):
-                args=[parseArgument(argument) for argument in atom.slice.value.elts]
+                args = [
+                    parseArgument(argument)
+                    for argument in atom.slice.value.elts
+                ]
                 return name, (args[0], args[1])
             else:
                 exception("Expecting two arguments to every atom", atom)
         else:
-            exception("Not a valid atom, expecting name[arg1,arg2] syntax.", atom)
+            exception("Not a valid atom, expecting name[arg1,arg2] syntax.",
+                      atom)
+
     def parseArgument(argument):
         """ Convert simple arguments such as 1 or "Hello" in foo[1,"Hello"]
             into plain-old python values. If the ast passed is not a simple value,
@@ -77,64 +114,68 @@ def interpreter(program,toBeInterpreted):
         elif isinstance(argument, ast.Subscript):
             return parseAtom(argument)
         else:
-            exception("Not a valid argument to an atom, this must be a simple python constant",argument)
+            exception(
+                "Not a valid argument to an atom, this must be a simple python constant",
+                argument)
 
-    def parseWhile(line):
-        if isinstance(line, ast.Subscript):
-            if isinstance(line.slice.value, ast.Tuple):
-                return line.slice.value.elts[0]
-
-    def checkWhile(condition):
-        return bool(getExpressionValue(condition))
-    
     # The main workhorse here is the code to compute the value of an expression
     # That function is getExpressionValue
-    def joinPair(v,p):
+    def joinPair(v, p):
         del p[v]
         return p
+
     def crossProduct(lst):
-        # if(debug): print(f'crossproduct {lst}')
+        if (debug): print(f'crossproduct {lst}')
         res = lst.pop()
         for pairs in lst:
-            res = crossProduct1(res,pairs)
+            res = crossProduct1(res, pairs)
         return res
-    def mergeKeys(x,y): # This is 'x | y' in python 3.9+, but I'm on 3.8.8 ~SJ
+
+    def mergeKeys(x,
+                  y):  # This is 'x | y' in python 3.9+, but I'm on 3.8.8 ~SJ
         z = x.copy()
         z.update(y)
         return z
-    def crossProduct1(a,b): # assuming all elements in a have the same keys, and all elements in b do too
+
+    def crossProduct1(
+        a, b
+    ):  # assuming all elements in a have the same keys, and all elements in b do too
         """ Combine two lists of dictionaries on common keys. """
-        if len(a)==0 or len(b)==0: return []
+        if len(a) == 0 or len(b) == 0: return []
         ksa = a[0].keys()
         ksb = b[0].keys()
-        overlap = sorted(set([ka for ka in ksa for kb in ksb if ka==kb]))
-        return [mergeKeys(v1, v2) for v1 in a for v2 in b if all([(v1[k]==v2[k]) for k in overlap])]
+        overlap = sorted(set([ka for ka in ksa for kb in ksb if ka == kb]))
+        return [
+            mergeKeys(v1, v2) for v1 in a for v2 in b
+            if all([(v1[k] == v2[k]) for k in overlap])
+        ]
+
     def getExpressionValue(expr):
         ret = {}
         if isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name)\
             and isinstance(expr.slice.value,ast.Tuple):
             nm = expr.value.id
-            if nm=='SOME':
+            if nm == 'SOME':
                 joinOn = parseArgument(expr.slice.value.elts[0])
                 values = getExpressionValue(expr.slice.value.elts[1])
-                return [joinPair(joinOn,pair) for pair in values]
-            elif nm=='WHERE':
+                return [joinPair(joinOn, pair) for pair in values]
+            elif nm == 'WHERE':
                 (name, args) = parseAtom(expr.slice.value.elts[0])
                 restriction = getExpressionValue(expr.slice.value.elts[1])
-                pairs = getFromStorage(name,args,restriction)
+                pairs = getFromStorage(name, args, restriction)
                 return pairs
             else:
                 args = [parseArgument(arg) for arg in expr.slice.value.elts]
-                pairs = getFromStorage(nm,args)
+                pairs = getFromStorage(nm, args)
                 return [pair for pair in pairs if pair != None]
         elif isinstance(expr, ast.BoolOp):
-            ret['args']=[getExpressionValue(arg) for arg in expr.values]
-            if(isinstance(expr.op,ast.And)):
+            ret['args'] = [getExpressionValue(arg) for arg in expr.values]
+            if (isinstance(expr.op, ast.And)):
                 return crossProduct(ret['args'])
-            if(isinstance(expr.op,ast.Or)):
+            if (isinstance(expr.op, ast.Or)):
                 return [v for vs in ret['args'] for v in vs]
             else:
-                exception(f"Unknown operator: {expr.op}",expr)
+                exception(f"Unknown operator: {expr.op}", expr)
         elif isinstance(expr, ast.Compare):
             if isinstance(expr.ops[0], ast.Is):
                 variable = expr.left.value
@@ -142,17 +183,17 @@ def interpreter(program,toBeInterpreted):
                 restriction = {variable: value}
                 return restriction
             else:
-                exception("Can only interpret `is` comparators",expr)
+                exception("Can only interpret `is` comparators", expr)
         else:
-            exception("Unexpected expression",expr)
-    
+            exception("Unexpected expression", expr)
+
     # TODO: This is where the code to your interpreter goes.
     # Note that you already have a function 'getExpressionValue' built for you
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
     memory = {}
-    loop_state = {}
+    loop = None
 
-    def getFromStorage(key, args, restrictions = {}):
+    def getFromStorage(key, args, restrictions={}):
         [var1, var2] = args
         restriction1 = restrictions[var1] if var1 in restrictions else None
         restriction2 = restrictions[var2] if var2 in restrictions else None
@@ -192,26 +233,14 @@ def interpreter(program,toBeInterpreted):
         val += f" # {arg2}" if arg2 else ''
         print(val)
 
-    def startLoop(start, iterations, lines):
-        if "condition" in loop_state: del loop_state["condition"]
-        loop_state["start_line"] = start
-        loop_state["end_line"] = start + lines - 1
-        loop_state["remaining_iterations"] = iterations - 1
-
-    def startWhile(line, start, lines):
-        condition = parseWhile(line)
-        if "remaining_iterations" in loop_state: del loop_state["remaining_iterations"]
-        loop_state["start_line"] = start
-        loop_state["end_line"] = start + lines - 1
-        loop_state["condition"] = condition
-
     def extractValues(value, arg1, arg2):
         try:
             val1 = value[arg1]
             val2 = value[arg2]
             return (val1, val2)
         except:
-            raise(RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
+            raise (
+                RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
 
     program_counter = 0
     lines = toBeInterpreted.body
@@ -224,15 +253,11 @@ def interpreter(program,toBeInterpreted):
                     printA(*args)
                 elif command == UPDATE_COMMAND:
                     updateMemory(command, args)
-                elif command == LOOP_ACTION:
-                    startLoop(program_counter + 1, *args)
-                elif command == WHILE_COMMAND:
-                    startWhile(line.value, program_counter + 1, args[1])
                 else:
                     storeInMemory(command, args)
             except:
                 [command, name] = parseAction(line.value)
-                
+
                 if command == CLEAR_ACTION:
                     clearMemory(name)
         elif isinstance(line, ast.Assign):
@@ -246,59 +271,56 @@ def interpreter(program,toBeInterpreted):
             else:
                 for value in values:
                     storeInMemory(command, extractValues(value, arg1, arg2))
-        else:
-            exception("Unsupported syntax line. Only Expressions and Assignments permitted", line)
-
-        if len(loop_state) == 0:
-            program_counter += 1
+        elif isinstance(line, ast.While):
+            [command, _] = parseAction(line.test)
+            loop = Loop(program_counter, line)
+            lines = lines[:program_counter] + line.body + lines[
+                program_counter + 1:]
             continue
-        elif program_counter == loop_state["end_line"]:
-            if "remaining_iterations" in loop_state:
-                if loop_state["remaining_iterations"]:
-                    program_counter = loop_state["start_line"]
-                    loop_state["remaining_iterations"] -= 1
-                else:
-                    program_counter += 1
-                continue
-            elif "condition" in loop_state:
-                if checkWhile(loop_state["condition"]):
-                    program_counter = loop_state["start_line"]
-                else:
-                    program_counter += 1
-                continue
-        program_counter += 1
-            
+        else:
+            exception(
+                "Unsupported syntax line. Only Expressions and Assignments permitted",
+                line)
 
-        
-
+        if loop and loop.check(program_counter):
+            program_counter = loop.start
+        else:
+            program_counter += 1
 
 
 # Run the interpreter if we are using this from the command line
 # The next line checks if we are running this from the command line (and not loading this file as a module)
 if __name__ == "__main__":
     dump = False
-    debug = False # TODO: Change the default setting for 'debug' if you'd like.
+    debug = False  # TODO: Change the default setting for 'debug' if you'd like.
     # command_line_arguments = sys.argv;
-    if len(sys.argv) == 1 or sys.argv[1]=="-h" or sys.argv[1]=="-help" or sys.argv[1]=="--help":
+    if len(sys.argv) == 1 or sys.argv[1] == "-h" or sys.argv[
+            1] == "-help" or sys.argv[1] == "--help":
         # if no arguments are given or help is requested, display some help
         print(f"Usage: python3 {sys.argv[0]} inputfile.py0")
-        print(f"  To see the parsed abstract-syntax-tree and exit: python3 {sys.argv[0]} -dump inputfile.py0")
-        print(f"  Toggle debug mode (default: {debug}): python3 {sys.argv[0]} -debug inputfile.py0")
+        print(
+            f"  To see the parsed abstract-syntax-tree and exit: python3 {sys.argv[0]} -dump inputfile.py0"
+        )
+        print(
+            f"  Toggle debug mode (default: {debug}): python3 {sys.argv[0]} -debug inputfile.py0"
+        )
         print("  (argument order matters)")
     else:
         # interpret the files that are given as command-line arguments
         for filename in sys.argv[1:]:
-            if filename=="-dump":
+            if filename == "-dump":
                 dump = True
-                continue 
-            if filename=="-debug":
+                continue
+            if filename == "-debug":
                 debug = not debug
-                continue 
+                continue
             # next line may crash if the file is not found, we should probably give a friendlier error message than the default
             data = open(filename).read()
-            tree = ast.parse(data, filename=filename) # parse the file into a nice data-structure
+            tree = ast.parse(
+                data,
+                filename=filename)  # parse the file into a nice data-structure
             if dump:
                 print(ast.dump(tree))
                 break
             # now we run our interpreter on the ast
-            interpreter(data,tree)
+            interpreter(data, tree)

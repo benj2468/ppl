@@ -8,11 +8,12 @@
 #    For this specific line, that means:
 #    "Hello" # "World!"
 # In this language, we can only print two things at a time
-PRINT["Hello","World!"]
+PRINT["Hello", "World!"]
 
 book["Benjamin", "The Book of Time"]
 book["Noah", "The Book of Time"]
-UPDATE[book["Benjamin", "The Book of Time"], book["Benjamin", "The Book of Space"]]
+UPDATE[book["Benjamin", "The Book of Time"], book["Benjamin",
+                                                  "The Book of Space"]]
 PRINT[1, 2] = WHERE[book[1, 2], 1 is "Noah"]
 
 CLEAR[book]
@@ -23,6 +24,6 @@ PRINT[1, 2] = book[1, 2]
 LOOP[3, 1]
 coffee["good", "day"]
 
-WHILE[coffee[1,2], 2]
-PRINT[1,2] = coffee[1,2]
+WHILE[coffee[1, 2], 2]
+PRINT[1, 2] = coffee[1, 2]
 CLEAR[coffee]
