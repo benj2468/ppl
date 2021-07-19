@@ -1,0 +1,95 @@
+# This is not python code, it is our own little code
+# but it looks (very vaguely) like python code
+# only because we wish to use the python parser.
+
+# PRINT[A,B] is used to print output
+#    In general, PRINT[A,B] will print:
+#    A # B
+#    If B is the empty string, the # is omitted.
+
+PRINT["Starting program!", ""]
+
+# populate 'start' and 'end'
+# The following means: store a triple ("start","TF","Town") in memory
+start["TF", "Town"]
+# The following adds ("start","FF","ForestEntrance") to that:
+start["FF", "ForestEntrance"]
+# If we were to retrieve 'start' at this point, we would see two entries.
+# Try it if you like:
+# PRINT[1,2] = start[1,2]
+# For the function 'getFromStorage' you write, the expression 'start[1,2]' should generate the call:
+# getFromStorage('start',[1, 2]) = [{1: 'TF', 2: 'Town'}, {1: 'FF', 2: 'ForestEntrance'}]
+start["FW", "Flowers"]
+start["WD", "Wolf"]
+start["FD", "ForestEntrance"]
+start["DG", "Driveway"]
+end["TF", "ForestEntrance"]
+end["FF", "Flowers"]
+end["FW", "Wolf"]
+end["WD", "Driveway"]
+end["FD", "Driveway"]
+end["DG", "GrandmaHouse"]
+# A little helper to point to flowers:
+atFlowers["Flowers", "Flowers"]
+
+# Let's print some more output and a newline..
+PRINT["Loaded all data!", ""]
+PRINT["", ""]
+
+PRINT[1, 2] = path[1, 2]
+
+# Now we do a simple calculation:
+#   if there is a road 3 that starts in 1 and ends in 2,
+#   then there is a path from 1 to 2,
+#   so we define our variable 'path' this way initially
+path[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
+
+# For the above expression, the following should work:
+# getFromStorage('start',[3, 1]) = [{3: 'TF', 1: 'Town'}, {3: 'FF', 1: 'ForestEntrance'}, {3: 'FW', 1: 'Flowers'}, {3: 'WD', 1: 'Wolf'}, {3: 'FD', 1: 'ForestEntrance'}, {3: 'DG', 1: 'Driveway'}]
+# getFromStorage('end',[3, 2]) = [{3: 'TF', 2: 'ForestEntrance'}, {3: 'FF', 2: 'Flowers'}, {3: 'FW', 2: 'Wolf'}, {3: 'WD', 2: 'Driveway'}, {3: 'FD', 2: 'Driveway'}, {3: 'DG', 2: 'GrandmaHouse'}]
+#
+# Note that the result should get stored into 'path'
+
+PRINT["All Roads:", ""]
+PRINT[1, 2] = path[1, 2]
+
+# If you stored 'path' correctly, then this should work:
+# getFromStorage(path,[1, 2]) = [{1: 'Driveway', 2: 'GrandmaHouse'}, {1: 'Flowers', 2: 'Wolf'}, {1: 'ForestEntrance', 2: 'Driveway'}, {1: 'ForestEntrance', 2: 'Flowers'}, {1: 'Town', 2: 'ForestEntrance'}, {1: 'Wolf', 2: 'Driveway'}]
+
+# making paths longer:
+#   if there is a path from 1 to 3 and one from 3 to 2,
+#   then there is also a path from 1 to 2.
+#   we repeat this to get all paths with a poor-man's loop (i.e. just repeating the code)
+path[1, 2] = SOME[3, path[1, 3] and path[3, 2]] or path[1, 2]
+PRINT["--", "--"]
+PRINT[1, 2] = path[1, 2]
+
+path[1, 2] = SOME[3, path[1, 3] and path[3, 2]] or path[1, 2]
+PRINT["--", "--"]
+PRINT[1, 2] = path[1, 2]
+
+path[1, 2] = SOME[3, path[1, 3] and path[3, 2]] or path[1, 2]
+PRINT["--", "--"]
+PRINT[1, 2] = path[1, 2]
+
+# let's get some output:
+PRINT["", ""]
+PRINT["All Paths:", ""]
+PRINT[1, 2] = path[1, 2]
+PRINT["", ""]
+
+# All paths along which I can find Flowers:
+viaFlowers[1, 2] = SOME[3, path[1, 3] and atFlowers[3, 3] and path[3, 2]]
+# All paths that start with Flowers:
+startAtFlowers[1, 2] = SOME[3, atFlowers[1, 3] and path[3, 2]]
+# All paths that end with Flowers:
+endAtFlowers[1, 2] = SOME[3, atFlowers[2, 3] and path[1, 3]]
+
+PRINT[
+    "All routes I can take without being able to visit Flowers on my way there:",
+    ""]
+PRINT[1, 2] = (
+    path[1, 2] - viaFlowers[1, 2]  # exclude paths via flowers
+    - startAtFlowers[1, 2]  # exclude paths starting at flowers
+    - endAtFlowers[1, 2]  # exclde paths ending at flowers
+)  # Parentheses aren't part of the AST, but the parser uses them to allow line endings

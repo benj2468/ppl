@@ -1,6 +1,8 @@
 import ast
 import sys
+from copy import deepcopy
 import os
+from typing import Dict, List
 
 PRINT_COMMAND = "PRINT"
 UPDATE_COMMAND = "UPDATE"
@@ -13,32 +15,231 @@ def interpreter(program, toBeInterpreted):
         Runs the ast given by 'toBeInterpreted'.
         The programString is used to construct readable error messages.
         If the program runs successfully, programString is not used. """
-    class Loop:
-        def __init__(self, program_counter, line):
+    class Scope:
+        def __init__(self, lines):
+            self.memory = {}
 
-            self.start = program_counter
-            self.end = self.start + len(line.body) - 1
-            self.condition = line.test
-            self.line = line
-            self.should_loop()
+            self.functions = {}
+            for line in lines:
+                if isinstance(line, ast.FunctionDef):
+                    self.functions[line.name] = Function(self, line)
 
-        def check(self, program_counter):
-            if program_counter == self.end:
-                return self.should_loop()
+            self.lines = lines
+            self.loops = []
+
+        def current_loop(self):
+            return self.loops and self.loops[-1]
+
+        def call_function(self, func, args):
+            self.functions[func].call(args)
+
+        def get_from_storage(self, key, args, restrictions={}) -> List[Dict]:
+            [var1, var2] = args
+            restriction1 = restrictions[var1] if var1 in restrictions else None
+            restriction2 = restrictions[var2] if var2 in restrictions else None
+            res = []
+            if not key in self.memory: return []
+
+            values = self.memory[key]
+            for (arg1, arg2) in values:
+                canAdd = True
+                if restriction1 and arg1 != restriction1:
+                    canAdd = False
+                if restriction2 and arg2 != restriction2:
+                    canAdd = False
+                if canAdd:
+                    res.append({var1: arg1, var2: arg2})
+            return res
+
+        def store_in_memory(self, key, entry) -> None:
+            if not key in self.memory:
+                self.memory[key] = set()
+            self.memory[key].add(entry)
+
+        def clear_memory(self, key) -> None:
+            del self.memory[key]
+
+        def remove_from_memory(self, key, entry) -> None:
+            self.memory[key].remove(entry)
+
+        def update_memory(self, key, diff):
+            (start, end) = diff
+            self.remove_from_memory(*start)
+            self.store_in_memory(*end)
+
+        def run(self) -> None:
+            program_counter = 0
+
+            while program_counter < len(self.lines):
+                line = self.lines[program_counter]
+                if isinstance(line, ast.Expr):
+                    try:
+                        [command, args] = parseAtom(line.value)
+                        if command == PRINT_COMMAND:
+                            printA(*args)
+                        elif command == UPDATE_COMMAND:
+                            self.update_memory(command, args)
+                        else:
+                            self.store_in_memory(command, args)
+                    except:
+                        [command, name] = self.parseAction(line.value)
+
+                        if command == CLEAR_ACTION:
+                            self.clear_memory(name)
+                elif isinstance(line, ast.Assign):
+                    [command, [arg1, arg2]] = parseAtom(line.targets[0])
+                    values = self.getExpressionValue(line.value)
+                    if command == PRINT_COMMAND:
+                        for value in values:
+                            printA(*extractValues(value, arg1, arg2))
+                    if command == UPDATE_COMMAND:
+                        exception(
+                            "Cannot perform update comand dynamically yet")
+                    else:
+                        for value in values:
+                            self.store_in_memory(
+                                command, extractValues(value, arg1, arg2))
+                elif isinstance(line, ast.While):
+                    Loop(self, line).run()
+                elif isinstance(line, ast.FunctionDef):
+                    pass
+                else:
+                    exception(
+                        "Unsupported syntax line. Only Expressions and Assignments permitted",
+                        line)
+
+                program_counter += 1
+
+        # Some parsing helper functions:
+        # parseAtom parses things like foo[1,"Bla"]
+        # parseArgument parses the 1 and "Bla" within that.
+        # These functions do some rudamentary checks to see if the syntax is okay
+        def parseAction(self, atom):
+            if isinstance(atom, ast.Subscript) and isinstance(
+                    atom.value, ast.Name):
+                name = atom.value.id
+                if isinstance(atom.slice.value, ast.Name):
+                    return (name, atom.slice.value.id)
+                elif isinstance(atom.slice.value, ast.Tuple):
+                    expresion = self.getExpressionValue(
+                        atom.slice.value.elts[0])
+                    iterations = parseAtom(atom.slice.value.elts[1])
+                    return (name, (expresion, iterations))
+                else:
+                    exception("Expecting an identifier", atom)
+            elif isinstance(atom, ast.Call):
+                self.call_function(atom.func.id, atom.args)
+                return (None, None)
             else:
-                return False
+                exception("Not a valid action, expecting action[name] syntax.",
+                          atom)
+
+        def getExpressionValue(self, expr):
+            ret = {}
+            if isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name)\
+                and isinstance(expr.slice.value,ast.Tuple):
+                nm = expr.value.id
+                if nm == 'SOME':
+                    joinOn = parseArgument(expr.slice.value.elts[0])
+                    values = self.getExpressionValue(expr.slice.value.elts[1])
+                    return [joinPair(joinOn, pair) for pair in values]
+                elif nm == 'WHERE':
+                    (name, args) = parseAtom(expr.slice.value.elts[0])
+                    restriction = self.getExpressionValue(
+                        expr.slice.value.elts[1])
+                    pairs = self.get_from_storage(name, args, restriction)
+                    return pairs
+                else:
+                    args = [
+                        parseArgument(arg) for arg in expr.slice.value.elts
+                    ]
+                    pairs = self.get_from_storage(nm, args)
+                    return [pair for pair in pairs if pair != None]
+            elif isinstance(expr, ast.BoolOp):
+                ret['args'] = [
+                    self.getExpressionValue(arg) for arg in expr.values
+                ]
+                if (isinstance(expr.op, ast.And)):
+                    return crossProduct(ret['args'])
+                if (isinstance(expr.op, ast.Or)):
+                    return [v for vs in ret['args'] for v in vs]
+                else:
+                    exception(f"Unknown operator: {expr.op}", expr)
+            elif isinstance(expr, ast.Compare):
+                if isinstance(expr.ops[0], ast.Is):
+                    variable = expr.left.value
+                    value = expr.comparators[0].value
+                    restriction = {variable: value}
+                    return restriction
+                else:
+                    exception("Can only interpret `is` comparators", expr)
+            elif isinstance(expr, ast.BinOp):
+                right = self.getExpressionValue(expr.right)
+                result = list(item
+                              for item in self.getExpressionValue(expr.left)
+                              if not item in right)
+                return result
+            else:
+                exception("Unexpected expression", expr)
+
+    class Function:
+        def __init__(self, scope: Scope, line: ast.FunctionDef) -> None:
+            self.arguments = list(a.arg for a in line.args.args)
+            self.scope = Scope(line.body)
+            self.scope.functions = scope.functions
+            self.super = scope
+
+        def call(self, args):
+            if len(args) != len(self.arguments):
+                exception("Incompatible number of arguments", self.arguments)
+            for (arg, renamed) in zip(args, self.arguments):
+                if isinstance(arg, ast.Name):
+                    key = arg.id
+                    self.scope.memory[renamed] = self.super.memory[
+                        key] if key in self.super.memory else set()
+            self.scope.run()
+            for (arg, renamed) in zip(args, self.arguments):
+                if isinstance(arg, ast.Name):
+                    key = arg.id
+                    if not key in self.super.memory:
+                        self.super.memory[key] = set()
+                    self.super.memory[key] = self.scope.memory[renamed]
+
+    class Loop:
+        def __init__(self, scope: Scope, line):
+            self.super = scope
+            self.condition = line.test
+            self.scope = Scope(line.body)
+            self.scope.memory = self.super.memory
+            self.scope.functions = {
+                *self.scope.functions, *self.super.functions
+            }
+
+        def run(self):
+            while self.should_loop():
+                self.scope.run()
+            self.super.memory = self.scope.memory
 
         def should_loop(self):
-            command, key = parseAction(self.condition)
-            if command == CHANGE_ACTION:
-                try:
-                    changed = len(self.state.difference(memory[key])) or len(
-                        memory[key].difference(self.state))
-                    self.state = memory[key].copy()
-                    return changed
-                except:
-                    self.state = memory[key].copy()
-                    return True
+            try:
+                command, key = self.super.parseAction(self.condition)
+                print(command, key)
+                if command == CHANGE_ACTION:
+                    try:
+                        changed = len(
+                            self.state.difference(
+                                self.scope.memory[key])) or len(
+                                    self.scope.memory[key].difference(
+                                        self.state))
+                        print(changed)
+                        self.state = self.scope.memory[key].copy()
+                        return changed
+                    except:
+                        self.state = self.scope.memory[key].copy()
+                        return True
+            except:
+                value = self.scope.getExpressionValue(self.condition)
+                return len(value)
             return False
 
     # program is the original source code (used for error messages),
@@ -63,25 +264,6 @@ def interpreter(program, toBeInterpreted):
                 f"{message}:\n{ast.unparse(structure)}\n{posInfo}"))
         else:
             raise (RuntimeError(f"{message}:\n{original}\n{posInfo}"))
-
-    # Some parsing helper functions:
-    # parseAtom parses things like foo[1,"Bla"]
-    # parseArgument parses the 1 and "Bla" within that.
-    # These functions do some rudamentary checks to see if the syntax is okay
-    def parseAction(atom):
-        if isinstance(atom, ast.Subscript) and isinstance(
-                atom.value, ast.Name):
-            name = atom.value.id
-            if isinstance(atom.slice.value, ast.Name):
-                return (name, atom.slice.value.id)
-            elif isinstance(atom.slice.value, ast.Tuple):
-                expresion = getExpressionValue(atom.slice.value.elts[0])
-                iterations = parseAtom(atom.slice.value.elts[1])
-                return (name, (expresion, iterations))
-            else:
-                exception("Expecting an identifier", atom)
-        else:
-            exception("Not a valid atom, expecting action[name] syntax.", atom)
 
     def parseAtom(atom):
         if isinstance(atom, ast.Subscript) and isinstance(
@@ -110,7 +292,8 @@ def interpreter(program, toBeInterpreted):
             return argument.value
         elif isinstance(argument, ast.Name):
             # The following might become acceptable at some point, so let's give it a different looking exception
-            exception(f"Expecting to see quotes around {ast.Name.id}")
+            # exception(f"Expecting to see quotes around {ast.Name.id}")
+            return argument.id
         elif isinstance(argument, ast.Subscript):
             return parseAtom(argument)
         else:
@@ -150,83 +333,9 @@ def interpreter(program, toBeInterpreted):
             if all([(v1[k] == v2[k]) for k in overlap])
         ]
 
-    def getExpressionValue(expr):
-        ret = {}
-        if isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name)\
-            and isinstance(expr.slice.value,ast.Tuple):
-            nm = expr.value.id
-            if nm == 'SOME':
-                joinOn = parseArgument(expr.slice.value.elts[0])
-                values = getExpressionValue(expr.slice.value.elts[1])
-                return [joinPair(joinOn, pair) for pair in values]
-            elif nm == 'WHERE':
-                (name, args) = parseAtom(expr.slice.value.elts[0])
-                restriction = getExpressionValue(expr.slice.value.elts[1])
-                pairs = getFromStorage(name, args, restriction)
-                return pairs
-            else:
-                args = [parseArgument(arg) for arg in expr.slice.value.elts]
-                pairs = getFromStorage(nm, args)
-                return [pair for pair in pairs if pair != None]
-        elif isinstance(expr, ast.BoolOp):
-            ret['args'] = [getExpressionValue(arg) for arg in expr.values]
-            if (isinstance(expr.op, ast.And)):
-                return crossProduct(ret['args'])
-            if (isinstance(expr.op, ast.Or)):
-                return [v for vs in ret['args'] for v in vs]
-            else:
-                exception(f"Unknown operator: {expr.op}", expr)
-        elif isinstance(expr, ast.Compare):
-            if isinstance(expr.ops[0], ast.Is):
-                variable = expr.left.value
-                value = expr.comparators[0].value
-                restriction = {variable: value}
-                return restriction
-            else:
-                exception("Can only interpret `is` comparators", expr)
-        else:
-            exception("Unexpected expression", expr)
-
     # TODO: This is where the code to your interpreter goes.
     # Note that you already have a function 'getExpressionValue' built for you
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
-    memory = {}
-    loop = None
-
-    def getFromStorage(key, args, restrictions={}):
-        [var1, var2] = args
-        restriction1 = restrictions[var1] if var1 in restrictions else None
-        restriction2 = restrictions[var2] if var2 in restrictions else None
-        res = []
-        if not key in memory: return []
-
-        values = memory[key]
-        for (arg1, arg2) in values:
-            canAdd = True
-            if restriction1 and arg1 != restriction1:
-                canAdd = False
-            if restriction2 and arg2 != restriction2:
-                canAdd = False
-            if canAdd:
-                res.append({var1: arg1, var2: arg2})
-
-        return res
-
-    def storeInMemory(key, entry):
-        if not key in memory:
-            memory[key] = set()
-        memory[key].add(entry)
-
-    def removeFromMemory(key, entry):
-        memory[key].remove(entry)
-
-    def clearMemory(key):
-        del memory[key]
-
-    def updateMemory(key, diff):
-        (start, end) = diff
-        removeFromMemory(*start)
-        storeInMemory(*end)
 
     def printA(arg1, arg2):
         val = arg1
@@ -242,50 +351,9 @@ def interpreter(program, toBeInterpreted):
             raise (
                 RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
 
-    program_counter = 0
     lines = toBeInterpreted.body
-    while program_counter < len(lines):
-        line = lines[program_counter]
-        if isinstance(line, ast.Expr):
-            try:
-                [command, args] = parseAtom(line.value)
-                if command == PRINT_COMMAND:
-                    printA(*args)
-                elif command == UPDATE_COMMAND:
-                    updateMemory(command, args)
-                else:
-                    storeInMemory(command, args)
-            except:
-                [command, name] = parseAction(line.value)
 
-                if command == CLEAR_ACTION:
-                    clearMemory(name)
-        elif isinstance(line, ast.Assign):
-            [command, [arg1, arg2]] = parseAtom(line.targets[0])
-            values = getExpressionValue(line.value)
-            if command == PRINT_COMMAND:
-                for value in values:
-                    printA(*extractValues(value, arg1, arg2))
-            if command == UPDATE_COMMAND:
-                exception("Cannot perform update comand dynamically yet")
-            else:
-                for value in values:
-                    storeInMemory(command, extractValues(value, arg1, arg2))
-        elif isinstance(line, ast.While):
-            [command, _] = parseAction(line.test)
-            loop = Loop(program_counter, line)
-            lines = lines[:program_counter] + line.body + lines[
-                program_counter + 1:]
-            continue
-        else:
-            exception(
-                "Unsupported syntax line. Only Expressions and Assignments permitted",
-                line)
-
-        if loop and loop.check(program_counter):
-            program_counter = loop.start
-        else:
-            program_counter += 1
+    Scope(lines).run()
 
 
 # Run the interpreter if we are using this from the command line

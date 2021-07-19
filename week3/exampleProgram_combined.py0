@@ -1,0 +1,59 @@
+# populate 'start' and 'end'
+# The following means: store a triple ("start","TF","Town") in memory
+start["TF", "Town"]
+# The following adds ("start","FF","ForestEntrance") to that:
+start["FF", "ForestEntrance"]
+# If we were to retrieve 'start' at this point, we would see two entries.
+# Try it if you like:
+# PRINT[1,2] = start[1,2]
+# For the function 'getFromStorage' you write, the expression 'start[1,2]' should generate the call:
+# getFromStorage('start',[1, 2]) = [{1: 'TF', 2: 'Town'}, {1: 'FF', 2: 'ForestEntrance'}]
+start["FW", "Flowers"]
+start["WD", "Wolf"]
+start["FD", "ForestEntrance"]
+start["DG", "Driveway"]
+end["TF", "ForestEntrance"]
+end["FF", "Flowers"]
+end["FW", "Wolf"]
+end["WD", "Driveway"]
+end["FD", "Driveway"]
+end["DG", "GrandmaHouse"]
+# A little helper to point to flowers:
+atFlowers["Flowers", "Flowers"]
+
+path[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
+
+# If you stored 'path' correctly, then this should work:
+# getFromStorage('path',[1, 2]) = [{1: 'Driveway', 2: 'GrandmaHouse'}, {1: 'Flowers', 2: 'Wolf'}, {1: 'ForestEntrance', 2: 'Driveway'}, {1: 'ForestEntrance', 2: 'Flowers'}, {1: 'Town', 2: 'ForestEntrance'}, {1: 'Wolf', 2: 'Driveway'}]
+
+# making paths longer:
+#   if there is a path from 1 to 3 and one from 3 to 2,
+#   then there is also a path from 1 to 2.
+#   we repeat this to get all paths with a poor-man's loop (i.e. just repeating the code)
+
+
+def fix(foo):
+    PRINT[1, 2] = atFlowers[1, 2]  # This should print nothing!
+    while foo[1, 2] - fooCopy[1, 2]:
+        fooCopy[1, 2] = foo[1, 2]
+        foo[1, 2] = SOME[3, foo[1, 3] and foo[3, 2]] or foo[1, 2]
+    # here we are done running our function: where do we pick up from here?
+
+
+fooCopy["Hello", "World"]
+fix(path)
+PRINT[1, 2] = fooCopy[1, 2]  # This should print ONLY: Hello # World
+PRINT[
+    "",
+    ""]  # Print a newline (recall that PRINT omits the # if the second argument is an empty string)
+PRINT["All places I can get to after Flowers:",
+      "(The following may be printed in any order)"]
+PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path[1, 2]]
+
+# The output of this program should be:
+# Hello # World
+#
+# All places I can get to after Flowers: # (The following may be printed in any order)
+# Flowers # Driveway
+# Flowers # GrandmaHouse
+# Flowers # Wolf

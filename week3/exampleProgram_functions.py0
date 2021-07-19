@@ -1,0 +1,75 @@
+# First example: function without arguments
+def fun1():
+    PRINT["Hello", ""]  # should print Hello
+
+
+fun1()
+fun1()  # should print hello twice
+
+# Second example: scoping rules
+# populate 'start' and 'end'
+# The following means: store a triple ("start","TF","Town") in memory
+start["TF", "Town"]
+
+
+def fun2():
+    PRINT[1, 2] = start[1, 2]  # should print nothing: start is not in scope
+    bla["Hello", "World"]
+
+
+fun2()
+PRINT[1, 2] = bla[1, 2]  # should print nothing: bla was not in scope
+
+
+# Third example: scoping rules: communicating results back
+def fun3(x):  # note that 'x' will be 'end' when instantiated.
+    x["TF", "ForestEntrance"]
+    x["FF", "Flowers"]
+    x["FW", "Wolf"]
+    x["WD", "Driveway"]
+    x["FD", "Driveway"]
+    x["DG", "GrandmaHouse"]
+
+
+start["FF", "ForestEntrance"]
+start["FW", "Flowers"]
+start["WD", "Wolf"]
+start["FD", "ForestEntrance"]
+start["DG", "Driveway"]
+
+fun3(end)  # populate end
+
+# A little helper to point to flowers:
+atFlowers["Flowers", "Flowers"]
+
+path[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
+
+# making paths longer:
+#   if there is a path from 1 to 3 and one from 3 to 2,
+#   then there is also a path from 1 to 2.
+#   we repeat this to get all paths with a poor-man's loop (i.e. just repeating the code)
+
+
+def fix(foo):
+    foo[1, 2] = SOME[3, foo[1, 3] and foo[3, 2]] or foo[1, 2]
+    foo[1, 2] = SOME[3, foo[1, 3] and foo[3, 2]] or foo[1, 2]
+    foo[1, 2] = SOME[3, foo[1, 3] and foo[3, 2]] or foo[1, 2]
+
+
+fooCopy["Hello", "World"]
+fix(path)
+PRINT[1, 2] = fooCopy[1, 2]  # This should print ONLY: Hello # World
+PRINT[
+    "",
+    ""]  # Print a newline (recall that PRINT omits the # if the second argument is an empty string)
+PRINT["All places I can get to after Flowers:",
+      "(The following may be printed in any order)"]
+PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path[1, 2]]
+
+# The output of this program should be:
+# Hello # World
+#
+# All places I can get to after Flowers: # (The following may be printed in any order)
+# Flowers # Driveway
+# Flowers # GrandmaHouse
+# Flowers # Wolf
