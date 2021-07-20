@@ -4,4 +4,8 @@ son["Robbie", "Benjamin"]
 if daughter[1, 2]:
     PRINT["Daughters", "EXISTS"]
 else:
+    if son[1, 2]:
+        PRINT['WE HAVE ... ', "SONS"]
+    else:
+        PRINT["Still", "no sons"]
     PRINT["NO", "Daughters"]

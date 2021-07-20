@@ -275,14 +275,10 @@ def interpreter(program, toBeInterpreted):
             if self.scope.getExpressionValue(self.condition):
                 self.scope.run()
             else:
-                if isinstance(self.options[0], ast.Expr):
-                    scope = Scope(self.options)\
-                        .with_memory_from(self.scope)\
-                        .with_functions_from(self.scope)
-                    scope.run()
-                for option in self.options:
-                    if isinstance(option, ast.If):
-                        If(self.scope, option).run()
+                scope = Scope(self.options)\
+                    .with_memory_from(self.scope)\
+                    .with_functions_from(self.scope)
+                scope.run()
             self.super.memory = self.scope.memory
 
     # program is the original source code (used for error messages),
