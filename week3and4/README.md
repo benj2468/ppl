@@ -17,19 +17,19 @@ The difference between a `Loop` and a `Scope` is that the `Loop`'s lines get run
 
 ## Functions
 
-A `Function` is an extension of a `Scope`. It has lines, a memory, and functions similar to a `Scope`. The functions that are provided on initialization to a `Function` are that of the parent `Scope`, the memory is initialized as empty, accept for any variables passed into the `Function`. Any changes made in a `Function` are applies to the `Function`'s scope. Then at the end of the function, the `Function`'s memory that is associated with the argument is returned to the parent `Scope`'s memory. In order to give each function, the entire function scope of the parent, we must loop over the code once to create the functions, then loop over the functions again and provide them with the scope of the parent. If we were to give each function the scope of the parent only when we see the function, it wouldn't get functions declared below it, but we want functions to be considered global.
+A `Function` is an extension of a `Scope`. It has lines, a memory, and functions similar to a `Scope`. The functions that are provided on initialization to a `Function` are that of the parent `Scope` and itself, the memory is initialized as empty, except for any variables passed into the `Function`. Any changes(memory changes) made in a `Function` are applied to the `Function`'s scope. Then at the end of the function, the `Function`'s memory that is associated with the argument is returned to the parent `Scope`'s memory. In order to give each function, the entire function scope of the parent, we must loop over the code once to create the functions, then loop over the functions again and provide them with the scope of the parent. If we were to give each function the scope of the parent only when we see the function, it wouldn't get functions declared below it, but we want functions to be considered global.
 
 # Nested Loops
 
 > Whether nested loops are supported and why
 
-Nested Loops should be supported, because a loop's body is simply another `Scope`, so adding a new loop in that `Scope` should not be a problem at all.
+Nested Loops should be supported, because a loop's body is simply another `Scope`, so adding a new loop in that `Scope` should not be a problem at all. An illustration of this being tested can be found in my [test.py0](./test.py0#37) file.
 
 # Nested Functions
 
 > Whether nested functions are supported, why, and how to test this
 
-Nested Functions should be supported, because a function's body is simply another `Scope`, so adding a new function in that `Scope` should not be a problem at all. An illustration of this being tested can be found in my [test.py0](./test.py0) file.
+Nested Functions should be supported, because a function's body is simply another `Scope`, so adding a new function in that `Scope` should not be a problem at all. An illustration of this being tested can be found in my [test.py0](./test.py0#L1) file.
 
 # Recursive Functions
 
