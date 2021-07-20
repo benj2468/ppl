@@ -23,7 +23,6 @@ def interpreter(program, toBeInterpreted):
             for line in lines:
                 if isinstance(line, ast.FunctionDef):
                     self.functions[line.name] = Function(self, line)
-
             self.lines = lines
             self.loops = []
 
@@ -189,9 +188,13 @@ def interpreter(program, toBeInterpreted):
         def __init__(self, scope: Scope, line: ast.FunctionDef) -> None:
             self.name = line.name
             self.arguments = list(a.arg for a in line.args.args)
-            self.scope = Scope(line.body)
-            self.scope.functions = scope.functions
             self.super = scope
+
+            self.scope = Scope(line.body)
+            self.scope.functions = {
+                **self.scope.functions,
+                **self.super.functions
+            }
 
         def call(self, args):
             if len(args) != len(self.arguments):
@@ -218,7 +221,8 @@ def interpreter(program, toBeInterpreted):
             self.scope = Scope(line.body)
             self.scope.memory = self.super.memory
             self.scope.functions = {
-                *self.scope.functions, *self.super.functions
+                **self.scope.functions,
+                **self.super.functions
             }
 
         def run(self):
