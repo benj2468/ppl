@@ -31,7 +31,10 @@ def interpreter(program, toBeInterpreted):
             return self.loops and self.loops[-1]
 
         def call_function(self, func, args):
-            self.functions[func].call(args)
+            if func in self.functions:
+                self.functions[func].call(args)
+            else:
+                raise RuntimeError(f"Function not in scope: {func}")
 
         def get_from_storage(self, key, args, restrictions={}) -> List[Dict]:
             [var1, var2] = args
@@ -184,6 +187,7 @@ def interpreter(program, toBeInterpreted):
 
     class Function:
         def __init__(self, scope: Scope, line: ast.FunctionDef) -> None:
+            self.name = line.name
             self.arguments = list(a.arg for a in line.args.args)
             self.scope = Scope(line.body)
             self.scope.functions = scope.functions
@@ -191,7 +195,9 @@ def interpreter(program, toBeInterpreted):
 
         def call(self, args):
             if len(args) != len(self.arguments):
-                exception("Incompatible number of arguments", self.arguments)
+                raise RuntimeError(
+                    f"Incompatible number of arguments to function: {self.name}"
+                )
             for (arg, renamed) in zip(args, self.arguments):
                 if isinstance(arg, ast.Name):
                     key = arg.id
