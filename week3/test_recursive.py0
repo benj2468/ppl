@@ -1,0 +1,6 @@
+def foo():
+    PRINT["Hello", "World"]
+    foo()
+
+
+foo()

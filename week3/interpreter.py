@@ -19,10 +19,14 @@ def interpreter(program, toBeInterpreted):
         def __init__(self, lines):
             self.memory = {}
 
-            self.functions = {}
+            self.functions: Dict[str, Function] = {}
             for line in lines:
                 if isinstance(line, ast.FunctionDef):
-                    self.functions[line.name] = Function(self, line)
+                    self.functions[line.name] = Function(line)
+
+            for function in self.functions.values():
+                function.add_super(self)
+
             self.lines = lines
             self.loops = []
 
@@ -185,15 +189,17 @@ def interpreter(program, toBeInterpreted):
                 exception("Unexpected expression", expr)
 
     class Function:
-        def __init__(self, scope: Scope, line: ast.FunctionDef) -> None:
+        def __init__(self, line: ast.FunctionDef) -> None:
             self.name = line.name
             self.arguments = list(a.arg for a in line.args.args)
-            self.super = scope
 
             self.scope = Scope(line.body)
+
+        def add_super(self, scope: Scope):
+            self.super = scope
             self.scope.functions = {
                 **self.scope.functions,
-                **self.super.functions
+                **self.super.functions, self.scope: self
             }
 
         def call(self, args):
