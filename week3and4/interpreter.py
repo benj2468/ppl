@@ -1,3 +1,4 @@
+from __future__ import annotations
 import ast
 import sys
 from copy import deepcopy
@@ -29,6 +30,14 @@ def interpreter(program, toBeInterpreted):
 
             self.lines = lines
             self.loops = []
+
+        def with_memory_from(self, scope):
+            self.memory = scope.memory
+            return self
+
+        def with_functions_from(self, scope):
+            self.functions = {**self.functions, **scope.functions}
+            return self
 
         def current_loop(self):
             return self.loops and self.loops[-1]
@@ -109,6 +118,8 @@ def interpreter(program, toBeInterpreted):
                     Loop(self, line).run()
                 elif isinstance(line, ast.FunctionDef):
                     pass
+                elif isinstance(line, ast.If):
+                    If(self, line).run()
                 else:
                     exception(
                         "Unsupported syntax line. Only Expressions and Assignments permitted",
@@ -185,6 +196,9 @@ def interpreter(program, toBeInterpreted):
                               for item in self.getExpressionValue(expr.left)
                               if not item in right)
                 return result
+            elif isinstance(expr, ast.UnaryOp):
+                if isinstance(expr.op, ast.Not):
+                    return not self.getExpressionValue(expr.operand)
             else:
                 exception("Unexpected expression", expr)
 
@@ -197,10 +211,7 @@ def interpreter(program, toBeInterpreted):
 
         def add_super(self, scope: Scope):
             self.super = scope
-            self.scope.functions = {
-                **self.scope.functions,
-                **self.super.functions, self.scope: self
-            }
+            self.scope = self.scope.with_functions_from(self.super)
 
         def call(self, args):
             if len(args) != len(self.arguments):
@@ -224,12 +235,8 @@ def interpreter(program, toBeInterpreted):
         def __init__(self, scope: Scope, line):
             self.super = scope
             self.condition = line.test
-            self.scope = Scope(line.body)
-            self.scope.memory = self.super.memory
-            self.scope.functions = {
-                **self.scope.functions,
-                **self.super.functions
-            }
+            self.scope = Scope(line.body).with_memory_from(
+                self.super).with_functions_from(self.super)
 
         def run(self):
             while self.should_loop():
@@ -239,7 +246,6 @@ def interpreter(program, toBeInterpreted):
         def should_loop(self):
             try:
                 command, key = self.super.parseAction(self.condition)
-                print(command, key)
                 if command == CHANGE_ACTION:
                     try:
                         changed = len(
@@ -247,7 +253,6 @@ def interpreter(program, toBeInterpreted):
                                 self.scope.memory[key])) or len(
                                     self.scope.memory[key].difference(
                                         self.state))
-                        print(changed)
                         self.state = self.scope.memory[key].copy()
                         return changed
                     except:
@@ -257,6 +262,28 @@ def interpreter(program, toBeInterpreted):
                 value = self.scope.getExpressionValue(self.condition)
                 return len(value)
             return False
+
+    class If:
+        def __init__(self, scope: Scope, line: ast.If) -> None:
+            self.super = scope
+            self.scope = Scope(line.body).with_memory_from(
+                self.super).with_functions_from(self.super)
+            self.condition = line.test
+            self.options = line.orelse
+
+        def run(self):
+            if self.scope.getExpressionValue(self.condition):
+                self.scope.run()
+            else:
+                if isinstance(self.options[0], ast.Expr):
+                    scope = Scope(self.options)\
+                        .with_memory_from(self.scope)\
+                        .with_functions_from(self.scope)
+                    scope.run()
+                for option in self.options:
+                    if isinstance(option, ast.If):
+                        If(self.scope, option).run()
+            self.super.memory = self.scope.memory
 
     # program is the original source code (used for error messages),
     # toBeInterpreted is the parsed structure that we'll work on.

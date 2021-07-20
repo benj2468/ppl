@@ -1,0 +1,7 @@
+son["Michael", "Robbie"]
+son["Robbie", "Benjamin"]
+
+if daughter[1, 2]:
+    PRINT["Daughters", "EXISTS"]
+else:
+    PRINT["NO", "Daughters"]
