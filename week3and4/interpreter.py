@@ -16,6 +16,9 @@ def interpreter(program, toBeInterpreted):
         Runs the ast given by 'toBeInterpreted'.
         The programString is used to construct readable error messages.
         If the program runs successfully, programString is not used. """
+
+    output = []
+
     class Scope:
         def __init__(self, lines):
             self.memory = {}
@@ -26,7 +29,6 @@ def interpreter(program, toBeInterpreted):
                     self.functions[line.name] = Function(line)
 
             self.lines = lines
-            self.loops = []
 
         def with_memory_from(self, scope):
             self.memory = scope.memory
@@ -35,9 +37,6 @@ def interpreter(program, toBeInterpreted):
         def with_functions_from(self, scope):
             self.functions = {**self.functions, **scope.functions}
             return self
-
-        def current_loop(self):
-            return self.loops and self.loops[-1]
 
         def call_function(self, func, args):
             if func in self.functions:
@@ -52,7 +51,8 @@ def interpreter(program, toBeInterpreted):
             res = []
             if not key in self.memory: return []
 
-            values = self.memory[key]
+            values = list(self.memory[key])
+            values.sort()
             for (arg1, arg2) in values:
                 canAdd = True
                 if restriction1 and arg1 != restriction1:
@@ -189,10 +189,11 @@ def interpreter(program, toBeInterpreted):
                     exception("Can only interpret `is` comparators", expr)
             elif isinstance(expr, ast.BinOp):
                 right = self.getExpressionValue(expr.right)
-                result = list(item
-                              for item in self.getExpressionValue(expr.left)
-                              if not item in right)
-                return result
+                if isinstance(expr.op, ast.Sub):
+                    result = list(
+                        item for item in self.getExpressionValue(expr.left)
+                        if not item in right)
+                    return result
             elif isinstance(expr, ast.UnaryOp):
                 if isinstance(expr.op, ast.Not):
                     return not self.getExpressionValue(expr.operand)
@@ -372,7 +373,7 @@ def interpreter(program, toBeInterpreted):
     def printA(arg1, arg2):
         val = arg1
         val += f" # {arg2}" if arg2 else ''
-        print(val)
+        output.append(val)
 
     def extractValues(value, arg1, arg2):
         try:
@@ -387,12 +388,19 @@ def interpreter(program, toBeInterpreted):
 
     Scope(lines).run()
 
+    # Printing the collected output
+    output = "\n".join(output)
+    print(output)
+
+    return output
+
 
 # Run the interpreter if we are using this from the command line
 # The next line checks if we are running this from the command line (and not loading this file as a module)
 if __name__ == "__main__":
     dump = False
     debug = False  # TODO: Change the default setting for 'debug' if you'd like.
+    test = False
     # command_line_arguments = sys.argv;
     if len(sys.argv) == 1 or sys.argv[1] == "-h" or sys.argv[
             1] == "-help" or sys.argv[1] == "--help":
@@ -412,7 +420,10 @@ if __name__ == "__main__":
                 dump = True
                 continue
             if filename == "-debug":
-                debug = not debug
+                debug = True
+                continue
+            if filename == "-test":
+                test = True
                 continue
             # next line may crash if the file is not found, we should probably give a friendlier error message than the default
             data = open(filename).read()
@@ -423,4 +434,14 @@ if __name__ == "__main__":
                 print(ast.dump(tree))
                 break
             # now we run our interpreter on the ast
-            interpreter(data, tree)
+            output = interpreter(data, tree)
+
+            if test:
+                file_name = filename[:len(filename) - 4] + "_output.txt"
+                with open(file_name, "r") as file:
+                    previous_contents = file.read()
+                    if previous_contents != output:
+                        print(file_name)
+                        print('output', output)
+                        print('prev', previous_contents)
+                        raise RuntimeError("Unexpected change in output")

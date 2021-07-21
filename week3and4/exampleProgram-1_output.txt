@@ -1,0 +1,78 @@
+Starting program!
+Loaded all data!
+
+All Roads:
+Driveway # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+Town # ForestEntrance
+Wolf # Driveway
+-- # --
+Driveway # GrandmaHouse
+Flowers # Driveway
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+ForestEntrance # GrandmaHouse
+ForestEntrance # Wolf
+Town # Driveway
+Town # Flowers
+Town # ForestEntrance
+Wolf # Driveway
+Wolf # GrandmaHouse
+-- # --
+Driveway # GrandmaHouse
+Flowers # Driveway
+Flowers # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+ForestEntrance # GrandmaHouse
+ForestEntrance # Wolf
+Town # Driveway
+Town # Flowers
+Town # ForestEntrance
+Town # GrandmaHouse
+Town # Wolf
+Wolf # Driveway
+Wolf # GrandmaHouse
+-- # --
+Driveway # GrandmaHouse
+Flowers # Driveway
+Flowers # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+ForestEntrance # GrandmaHouse
+ForestEntrance # Wolf
+Town # Driveway
+Town # Flowers
+Town # ForestEntrance
+Town # GrandmaHouse
+Town # Wolf
+Wolf # Driveway
+Wolf # GrandmaHouse
+
+All Paths:
+Driveway # GrandmaHouse
+Flowers # Driveway
+Flowers # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+ForestEntrance # GrandmaHouse
+ForestEntrance # Wolf
+Town # Driveway
+Town # Flowers
+Town # ForestEntrance
+Town # GrandmaHouse
+Town # Wolf
+Wolf # Driveway
+Wolf # GrandmaHouse
+
+All routes I can take without being able to visit Flowers on my way there:
+Driveway # GrandmaHouse
+Town # ForestEntrance
+Wolf # Driveway
+Wolf # GrandmaHouse

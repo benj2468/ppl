@@ -1,0 +1,32 @@
+Starting program!
+Loaded all data!
+
+All Roads:
+Driveway # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+Town # ForestEntrance
+Wolf # Driveway
+
+All Paths:
+Driveway # GrandmaHouse
+Flowers # Driveway
+Flowers # GrandmaHouse
+Flowers # Wolf
+ForestEntrance # Driveway
+ForestEntrance # Flowers
+ForestEntrance # GrandmaHouse
+ForestEntrance # Wolf
+Town # Driveway
+Town # Flowers
+Town # ForestEntrance
+Town # GrandmaHouse
+Town # Wolf
+Wolf # Driveway
+Wolf # GrandmaHouse
+
+All places I can get to after Flowers:
+Flowers # Driveway
+Flowers # GrandmaHouse
+Flowers # Wolf
