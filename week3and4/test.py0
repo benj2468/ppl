@@ -1,46 +1,54 @@
-def foo():
-    def bar():
-        baz["foo", "bar"]
-        PRINT[1, 2] = baz[1, 2]
+# def foo():
+#     def bar():
+#         baz["foo", "bar"]
+#         PRINT[1, 2] = baz[1, 2]
 
-    bar()
+#     bar()
+
+# foo()
+
+# # populate 'start' and 'end'
+# # The following means: store a triple ("start","TF","Town") in memory
+# start["TF", "Town"]
+# # The following adds ("start","FF","ForestEntrance") to that:
+# start["FF", "ForestEntrance"]
+# # If we were to retrieve 'start' at this point, we would see two entries.
+# # Try it if you like:
+# # PRINT[1,2] = start[1,2]
+# # For the function 'getFromStorage' you write, the expression 'start[1,2]' should generate the call:
+# # getFromStorage('start',[1, 2]) = [{1: 'TF', 2: 'Town'}, {1: 'FF', 2: 'ForestEntrance'}]
+# start["FW", "Flowers"]
+# start["WD", "Wolf"]
+# start["FD", "ForestEntrance"]
+# start["DG", "Driveway"]
+# end["TF", "ForestEntrance"]
+# end["FF", "Flowers"]
+# end["FW", "Wolf"]
+# end["WD", "Driveway"]
+# end["FD", "Driveway"]
+# end["DG", "GrandmaHouse"]
+# # A little helper to point to flowers:
+# atFlowers["Flowers", "Flowers"]
+
+# path[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
+# path2[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
+
+# while path[1, 2] - fooCopy[1, 2]:
+#     fooCopy[1, 2] = path[1, 2]
+#     path[1, 2] = SOME[3, path[1, 3] and path[3, 2]] or path[1, 2]
+
+#     while path2[1, 2] - foobarCopy[1, 2]:
+#         foobarCopy[1, 2] = path2[1, 2]
+#         path2[1, 2] = SOME[3, path2[1, 3] and path2[3, 2]] or path2[1, 2]
+
+# PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path[1, 2]]
+# PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path2[1, 2]]
+
+
+def foo():
+    PRINT[1, 2] = t1[1, 2]
+    t1['ben', 'cape']
 
 
 foo()
-
-# populate 'start' and 'end'
-# The following means: store a triple ("start","TF","Town") in memory
-start["TF", "Town"]
-# The following adds ("start","FF","ForestEntrance") to that:
-start["FF", "ForestEntrance"]
-# If we were to retrieve 'start' at this point, we would see two entries.
-# Try it if you like:
-# PRINT[1,2] = start[1,2]
-# For the function 'getFromStorage' you write, the expression 'start[1,2]' should generate the call:
-# getFromStorage('start',[1, 2]) = [{1: 'TF', 2: 'Town'}, {1: 'FF', 2: 'ForestEntrance'}]
-start["FW", "Flowers"]
-start["WD", "Wolf"]
-start["FD", "ForestEntrance"]
-start["DG", "Driveway"]
-end["TF", "ForestEntrance"]
-end["FF", "Flowers"]
-end["FW", "Wolf"]
-end["WD", "Driveway"]
-end["FD", "Driveway"]
-end["DG", "GrandmaHouse"]
-# A little helper to point to flowers:
-atFlowers["Flowers", "Flowers"]
-
-path[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
-path2[1, 2] = SOME[3, start[3, 1] and end[3, 2]]
-
-while path[1, 2] - fooCopy[1, 2]:
-    fooCopy[1, 2] = path[1, 2]
-    path[1, 2] = SOME[3, path[1, 3] and path[3, 2]] or path[1, 2]
-
-    while path2[1, 2] - foobarCopy[1, 2]:
-        foobarCopy[1, 2] = path2[1, 2]
-        path2[1, 2] = SOME[3, path2[1, 3] and path2[3, 2]] or path2[1, 2]
-
-PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path[1, 2]]
-PRINT[1, 2] = SOME[3, atFlowers[1, 3] and path2[1, 2]]
+foo()

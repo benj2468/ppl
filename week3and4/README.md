@@ -17,7 +17,7 @@ The difference between a `Loop` and a `Scope` is that the `Loop`'s lines get run
 
 ## Functions
 
-A `Function` is an extension of a `Scope`. It has lines, a memory, and functions similar to a `Scope`. The functions that are provided on initialization to a `Function` are that of the parent `Scope` and itself, the memory is initialized as empty, except for any variables passed into the `Function`. Any changes(memory changes) made in a `Function` are applied to the `Function`'s scope. Then at the end of the function, the `Function`'s memory that is associated with the argument is returned to the parent `Scope`'s memory. In order to give each function, the entire function scope of the parent, we must loop over the code once to create the functions, then loop over the functions again and provide them with the scope of the parent. If we were to give each function the scope of the parent only when we see the function, it wouldn't get functions declared below it, but we want functions to be considered global.
+A `Function` is an extension of a `Scope`. It has lines, a memory, and functions similar to a `Scope`. The functions that are provided on initialization to a `Function` are that of the parent `Scope` and itself, the memory is initialized as empty, except for any variables passed into the `Function`. Any changes(memory changes) made in a `Function` are applied to the `Function`'s scope. Then at the end of the function, the `Function`'s memory that is associated with the argument is returned to the parent `Scope`'s memory. Unlike other scopes, when we initialize a `Function` we do not initialize it's scope, we only save it's lines. We only create a new scope when we call the function.
 
 # Nested Loops
 

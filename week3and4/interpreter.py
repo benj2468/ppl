@@ -25,9 +25,6 @@ def interpreter(program, toBeInterpreted):
                 if isinstance(line, ast.FunctionDef):
                     self.functions[line.name] = Function(line)
 
-            for function in self.functions.values():
-                function.add_super(self)
-
             self.lines = lines
             self.loops = []
 
@@ -44,7 +41,7 @@ def interpreter(program, toBeInterpreted):
 
         def call_function(self, func, args):
             if func in self.functions:
-                self.functions[func].call(args)
+                self.functions[func].call(self, args)
             else:
                 raise RuntimeError(f"Function not in scope: {func}")
 
@@ -206,30 +203,26 @@ def interpreter(program, toBeInterpreted):
         def __init__(self, line: ast.FunctionDef) -> None:
             self.name = line.name
             self.arguments = list(a.arg for a in line.args.args)
+            self.lines = line.body
 
-            self.scope = Scope(line.body)
-
-        def add_super(self, scope: Scope):
-            self.super = scope
-            self.scope = self.scope.with_functions_from(self.super)
-
-        def call(self, args):
+        def call(self, super_scope, args):
             if len(args) != len(self.arguments):
                 raise RuntimeError(
                     f"Incompatible number of arguments to function: {self.name}"
                 )
+            scope = Scope(self.lines).with_functions_from(super_scope)
             for (arg, renamed) in zip(args, self.arguments):
                 if isinstance(arg, ast.Name):
                     key = arg.id
-                    self.scope.memory[renamed] = self.super.memory[
-                        key] if key in self.super.memory else set()
-            self.scope.run()
+                    scope.memory[renamed] = super_scope.memory[
+                        key] if key in super_scope.memory else set()
+            scope.run()
             for (arg, renamed) in zip(args, self.arguments):
                 if isinstance(arg, ast.Name):
                     key = arg.id
-                    if not key in self.super.memory:
-                        self.super.memory[key] = set()
-                    self.super.memory[key] = self.scope.memory[renamed]
+                    if not key in super_scope.memory:
+                        super_scope.memory[key] = set()
+                    super_scope.memory[key] = scope.memory[renamed]
 
     class Loop:
         def __init__(self, scope: Scope, line):
