@@ -26,6 +26,10 @@ def interpreter(program, toBeInterpreted):
             self.functions: Dict[str, Function] = {}
             for line in lines:
                 if isinstance(line, ast.FunctionDef):
+                    if line.name in self.functions:
+                        exception(
+                            "Cannot instantiate two functions with the same name in the same scope",
+                            line)
                     self.functions[line.name] = Function(line)
 
             self.lines = lines
