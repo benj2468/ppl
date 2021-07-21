@@ -49,28 +49,28 @@ def interpreter(program, toBeInterpreted):
                 raise RuntimeError(f"Function not in scope: {func}")
 
         def get_from_storage(self, key, args, restrictions={}) -> List[Dict]:
-            [var1, var2] = args
-            restriction1 = restrictions[var1] if var1 in restrictions else None
-            restriction2 = restrictions[var2] if var2 in restrictions else None
+            restrictions = [restrictions[var] if var in restrictions else None for var in args]
             res = []
             if not key in self.memory: return []
 
             values = list(self.memory[key])
             values.sort()
-            for (arg1, arg2) in values:
+            for value in values:
                 canAdd = True
-                if restriction1 and arg1 != restriction1:
-                    canAdd = False
-                if restriction2 and arg2 != restriction2:
-                    canAdd = False
+                for (i, restr) in enumerate(restrictions):
+                    if restr and value[i] != restr:
+                        canAdd = False
                 if canAdd:
-                    res.append({var1: arg1, var2: arg2})
+                    # res.append({var1: arg1, var2: arg2})
+                    res.append({
+                        arg:value for (arg, value) in zip(args, value)
+                    })
             return res
 
-        def store_in_memory(self, key, entry) -> None:
+        def store_in_memory(self, key, args) -> None:
             if not key in self.memory:
                 self.memory[key] = set()
-            self.memory[key].add(entry)
+            self.memory[key].add(tuple(args))
 
         def clear_memory(self, key) -> None:
             del self.memory[key]
@@ -78,10 +78,10 @@ def interpreter(program, toBeInterpreted):
         def remove_from_memory(self, key, entry) -> None:
             self.memory[key].remove(entry)
 
-        def update_memory(self, key, diff):
-            (start, end) = diff
-            self.remove_from_memory(*start)
-            self.store_in_memory(*end)
+        def update_memory(self, diff):
+            [start, end] = diff
+            self.remove_from_memory(start[0], start[1:])
+            self.store_in_memory(end[0], end[1:])
 
         def run(self) -> None:
             program_counter = 0
@@ -90,11 +90,11 @@ def interpreter(program, toBeInterpreted):
                 line = self.lines[program_counter]
                 if isinstance(line, ast.Expr):
                     try:
-                        [command, args] = parseAtom(line.value)
+                        command, *args = parseAtom(line.value)
                         if command == PRINT_COMMAND:
                             printA(*args)
                         elif command == UPDATE_COMMAND:
-                            self.update_memory(command, args)
+                            self.update_memory(args)
                         else:
                             self.store_in_memory(command, args)
                     except:
@@ -103,18 +103,18 @@ def interpreter(program, toBeInterpreted):
                         if command == CLEAR_ACTION:
                             self.clear_memory(name)
                 elif isinstance(line, ast.Assign):
-                    [command, [arg1, arg2]] = parseAtom(line.targets[0])
+                    command, *args = parseAtom(line.targets[0])
                     values = self.getExpressionValue(line.value)
                     if command == PRINT_COMMAND:
                         for value in values:
-                            printA(*extractValues(value, arg1, arg2))
+                            printA(*extractValues(value, *args))
                     if command == UPDATE_COMMAND:
                         exception(
                             "Cannot perform update comand dynamically yet")
                     else:
                         for value in values:
                             self.store_in_memory(
-                                command, extractValues(value, arg1, arg2))
+                                command, extractValues(value, *args))
                 elif isinstance(line, ast.While):
                     Loop(self, line).run()
                 elif isinstance(line, ast.FunctionDef):
@@ -162,7 +162,7 @@ def interpreter(program, toBeInterpreted):
                     values = self.getExpressionValue(expr.slice.value.elts[1])
                     return [joinPair(joinOn, pair) for pair in values]
                 elif nm == 'WHERE':
-                    (name, args) = parseAtom(expr.slice.value.elts[0])
+                    name, *args = parseAtom(expr.slice.value.elts[0])
                     restriction = self.getExpressionValue(
                         expr.slice.value.elts[1])
                     pairs = self.get_from_storage(name, args, restriction)
@@ -173,6 +173,14 @@ def interpreter(program, toBeInterpreted):
                     ]
                     pairs = self.get_from_storage(nm, args)
                     return [pair for pair in pairs if pair != None]
+            elif isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name)\
+                and isinstance(expr.slice.value,ast.Constant):
+                nm = expr.value.id
+                args = [
+                    parseArgument(expr.slice.value)
+                ]
+                pairs = self.get_from_storage(nm, args)
+                return [pair for pair in pairs if pair != None]
             elif isinstance(expr, ast.BoolOp):
                 ret['args'] = [
                     self.getExpressionValue(arg) for arg in expr.values
@@ -311,7 +319,10 @@ def interpreter(program, toBeInterpreted):
                     parseArgument(argument)
                     for argument in atom.slice.value.elts
                 ]
-                return name, (args[0], args[1])
+                return name, *args
+            elif isinstance(atom.slice.value, ast.Constant):
+                args = [parseArgument(atom.slice.value)]
+                return name, *args
             else:
                 exception("Expecting two arguments to every atom", atom)
         else:
@@ -374,19 +385,18 @@ def interpreter(program, toBeInterpreted):
     # Note that you already have a function 'getExpressionValue' built for you
     # The only caveat is that it relies on a yet-to-be-defined function getFromStorage.
 
-    def printA(arg1, arg2):
-        val = arg1
-        val += f" # {arg2}" if arg2 else ''
+    def printA(*args):
+        val = args[0]
+        for arg in args[1:]:
+            val += f" # {arg}" if arg else ''
         output.append(val)
 
-    def extractValues(value, arg1, arg2):
+    def extractValues(value, *args):
         try:
-            val1 = value[arg1]
-            val2 = value[arg2]
-            return (val1, val2)
+            return [value[arg] for arg in args]
         except:
             raise (
-                RuntimeError(f"Scoping error: {arg1} or {arg2} not in scope."))
+                RuntimeError(f"Scoping error: {args} not in scope."))
 
     lines = toBeInterpreted.body
 

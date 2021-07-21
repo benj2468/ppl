@@ -53,3 +53,11 @@ def foo2():
 
 foo2()
 foo2()
+
+foobarbaz["foo", 'bar', 'baz']
+foobar["foo", "bar"]
+foo["foo"]
+
+PRINT[1, 2, 3] = foobarbaz[1, 2, 3]
+PRINT[1, 2] = foobar[1, 2]
+PRINT[1] = foo[1]
