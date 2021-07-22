@@ -56,8 +56,13 @@ foo2()
 
 foobarbaz["foo", 'bar', 'baz']
 foobar["foo", "bar"]
+foobar["foo", "bar", "toodlers"]
 foo["foo"]
 
-PRINT[1, 2, 3] = foobarbaz[1, 2, 3]
-PRINT[1, 2] = foobar[1, 2]
+todo["bing", "bo"]
+todo["bo", "bing"]
+
+PRINT[4, 3, 2] = foobarbaz[2, 3, 4]
+PRINT[1, 2, 3] = foobar[1, 2, 3]
+PRINT[4, 2] = WHERE[todo[4, 2], 2 is "bing"]
 PRINT[1] = foo[1]

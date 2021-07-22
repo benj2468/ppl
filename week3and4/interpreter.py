@@ -49,22 +49,22 @@ def interpreter(program, toBeInterpreted):
                 raise RuntimeError(f"Function not in scope: {func}")
 
         def get_from_storage(self, key, args, restrictions={}) -> List[Dict]:
-            restrictions = [restrictions[var] if var in restrictions else None for var in args]
+            restrictions = list(filter(lambda x: x, [(restrictions[var], var) if var in restrictions else None for var in args]))
             res = []
+
             if not key in self.memory: return []
 
             values = list(self.memory[key])
+
             values.sort()
             for value in values:
+                matched = {arg:v for (arg, v) in zip(args, value)}
                 canAdd = True
-                for (i, restr) in enumerate(restrictions):
-                    if restr and value[i] != restr:
+                for (restr, i) in restrictions:
+                    if matched[i] != restr:
                         canAdd = False
                 if canAdd:
-                    # res.append({var1: arg1, var2: arg2})
-                    res.append({
-                        arg:value for (arg, value) in zip(args, value)
-                    })
+                    res.append(matched)
             return res
 
         def store_in_memory(self, key, args) -> None:
@@ -392,11 +392,7 @@ def interpreter(program, toBeInterpreted):
         output.append(val)
 
     def extractValues(value, *args):
-        try:
-            return [value[arg] for arg in args]
-        except:
-            raise (
-                RuntimeError(f"Scoping error: {args} not in scope."))
+        return [value[arg] if arg in value else "_" for arg in args]
 
     lines = toBeInterpreted.body
 
