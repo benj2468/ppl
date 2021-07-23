@@ -52,6 +52,10 @@ I've added some testing functionality. By typing out what I expect to be printed
   So if the programmer wants to only print the first and third values, then they can do so without running into an error. This is seen also in [test.py](./test.py0#L67)
   - Also with this change, you can enter into the same variable name, tuples of different lengths. This runs along the same vein as python where lists can contains whatever types you want, and are not restrictive. As a result, printing a value that does not exist in one tuple will simply output an "\_" (underscore). THis can also be seen in the output of [test.py](./test_output.txt#L9-L11)
 
+# Version
+
+All code must be run on python3.8
+
 # Author
 
 - Benjamin Cape '22
