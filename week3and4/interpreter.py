@@ -35,7 +35,7 @@ def interpreter(program, toBeInterpreted):
             self.lines = lines
 
         def with_memory_from(self, scope):
-            self.memory = scope.memory
+            self.memory = deepcopy(scope.memory)
             return self
 
         def with_functions_from(self, scope):
@@ -61,7 +61,7 @@ def interpreter(program, toBeInterpreted):
                 matched = {arg:v for (arg, v) in zip(args, value)}
                 canAdd = True
                 for (restr, i) in restrictions:
-                    if matched[i] != restr:
+                    if not restr(matched[i]):
                         canAdd = False
                 if canAdd:
                     res.append(matched)
@@ -108,7 +108,7 @@ def interpreter(program, toBeInterpreted):
                     if command == PRINT_COMMAND:
                         for value in values:
                             printA(*extractValues(value, *args))
-                    if command == UPDATE_COMMAND:
+                    elif command == UPDATE_COMMAND:
                         exception(
                             "Cannot perform update comand dynamically yet")
                     else:
@@ -117,10 +117,12 @@ def interpreter(program, toBeInterpreted):
                                 command, extractValues(value, *args))
                 elif isinstance(line, ast.While):
                     Loop(self, line).run()
-                elif isinstance(line, ast.FunctionDef):
+                elif isinstance(line, ast.FunctionDef) | isinstance(line, ast.Pass):
                     pass
                 elif isinstance(line, ast.If):
                     If(self, line).run()
+                elif isinstance(line, ast.For):
+                    ForIn(self, line).run()
                 else:
                     exception(
                         "Unsupported syntax line. Only Expressions and Assignments permitted",
@@ -195,7 +197,12 @@ def interpreter(program, toBeInterpreted):
                 if isinstance(expr.ops[0], ast.Is):
                     variable = expr.left.value
                     value = expr.comparators[0].value
-                    restriction = {variable: value}
+                    restriction = {variable: lambda x: x == value}
+                    return restriction
+                if isinstance(expr.ops[0], ast.IsNot):
+                    variable = expr.left.value
+                    value = expr.comparators[0].value
+                    restriction = {variable: lambda x: x != value}
                     return restriction
                 else:
                     exception("Can only interpret `is` comparators", expr)
@@ -236,6 +243,24 @@ def interpreter(program, toBeInterpreted):
                     if not key in super_scope.memory:
                         super_scope.memory[key] = set()
                     super_scope.memory[key] = scope.memory[renamed]
+
+    class ForIn:
+        def __init__(self, scope: Scope, line: ast.For):
+            self.super = scope
+            self.iter = line.iter
+            self.target = line.target.id
+            self.scope = Scope(line.body).with_memory_from(
+                self.super).with_functions_from(self.super)
+            
+
+        def run(self):
+            for t in self.scope.getExpressionValue(self.iter):
+                self.scope.memory[self.target].clear()
+                self.scope.memory[self.target].add(t.values(),)
+                self.scope.run()
+
+            self.scope.memory[self.target] = self.super.memory[self.target]
+            self.super.memory = self.scope.memory
 
     class Loop:
         def __init__(self, scope: Scope, line):

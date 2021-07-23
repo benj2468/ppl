@@ -1,0 +1,12 @@
+student["Ben"]
+student["Gabe"]
+student["Satch"]
+student["Karim"]
+
+x["foo", "bar"]
+
+for x in WHERE[student[1], 1 is not "Karim"]:
+    filtered[1] = x[1]
+
+PRINT[1] = filtered[1]
+PRINT[1, 2] = x[1, 2]

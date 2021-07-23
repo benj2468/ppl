@@ -8,3 +8,4 @@ test:
 	/opt/homebrew/opt/python@3.8/libexec/bin/python interpreter.py -test ifelse.py0
 	/opt/homebrew/opt/python@3.8/libexec/bin/python interpreter.py -test newFuncs.py0
 	/opt/homebrew/opt/python@3.8/libexec/bin/python interpreter.py -test test.py0
+	/opt/homebrew/opt/python@3.8/libexec/bin/python interpreter.py -test test_forin.py0
