@@ -165,6 +165,7 @@ currentTurnPieces game =
   Data.List.filter (\p -> color p == turn game) (activePieces game)
 
 -- Determine's which color occupies a given position on the board, if at all
+-- This is never used though...
 occupantColor :: Board -> Position -> Maybe Color
 occupantColor b pos = case lookup pos b of
   Nothing -> Nothing
