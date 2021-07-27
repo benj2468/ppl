@@ -1,8 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wall #-}
 
--- REMOVE ALL INSTANCES OF SHOW, AND CREATE A DISPLAY like in Rust
-
 import           Data.Char
 import           Data.List               hiding ( lookup )
 import           Data.Map                       ( Map
@@ -10,25 +8,35 @@ import           Data.Map                       ( Map
                                                 , elems
                                                 , filter
                                                 , fromList
+                                                , insert
                                                 , lookup
                                                 , mapMaybe
                                                 , update
                                                 )
 import           Data.Maybe
+import           Data.Set                       ( Set
+                                                , empty
+                                                , fromAscList
+                                                , toList
+                                                , union
+                                                )
 import           Data.Text
 import           Prelude                 hiding ( head
                                                 , lookup
                                                 )
 
+-- Parsing a Structure from a String
 class Parse n where
   parse :: String -> n
 
+-- Display a Structure in a human readable format
 class Display n where
   display :: n -> String
 
 -- Position, this holds all the positions on the board
 data Position = C0 | C1 | C2 | C3 | C4 | C5 | C6 | C7 deriving (Show, Ord, Eq)
 
+-- Get the two positions adjacent to a given position, returning Nothing if a position is at the edge of the board
 adjacent :: Position -> (Maybe Position, Maybe Position)
 adjacent C0 = (Nothing, Just C1)
 adjacent C1 = (Just C0, Just C2)
@@ -39,9 +47,11 @@ adjacent C5 = (Just C4, Just C6)
 adjacent C6 = (Just C5, Just C7)
 adjacent C7 = (Just C6, Nothing)
 
+-- Get the previous position, to the left
 prevPosition :: Position -> Maybe Position
 prevPosition x = fst (adjacent x)
 
+-- Get the next position, to the right
 nextPosition :: Position -> Maybe Position
 nextPosition x = snd (adjacent x)
 
@@ -71,6 +81,7 @@ instance Parse Color where
   parse "W" = White
   parse e   = error ("Could not parse that color: " ++ show e)
 
+-- Determines the next color to play, identical to (not color) if color were
 nextColor :: Color -> Color
 nextColor Black = White
 nextColor White = Black
@@ -93,10 +104,12 @@ instance Parse Piece where
     , color = if isUpper (Data.List.head str) then White else Black
     }
 
+-- Parse a String to create an optional piece, Nothing implies a blank square
 parseM :: String -> Maybe Piece
 parseM "-" = Nothing
 parseM str = Just (parse str)
 
+-- The opposite of parseM, shows a Piece, filling a piece with a "-" if it is not actually a Piece
 showMPiece :: Maybe Piece -> String
 showMPiece (Just piece) = display piece
 showMPiece Nothing      = "-"
@@ -112,7 +125,7 @@ piecePosition game piece =
     Nothing  -> Nothing
     Just pos -> Just (fst pos)
 
--- Parsing a Board
+-- Parsing a Board helper
 parseSplitBoard :: [Text] -> Board
 parseSplitBoard text = Data.Map.mapMaybe
   id
@@ -131,6 +144,7 @@ parseSplitBoard text = Data.Map.mapMaybe
     )
   )
 
+-- Parse a Board from a String (Text) to the structure
 parseBoard :: Text -> Board
 parseBoard str = parseSplitBoard (chunksOf 1 str)
 
@@ -139,12 +153,13 @@ data GameState = Game
   { turn  :: Color
   , board :: Board
   }
-  deriving Show
+  deriving (Show, Eq)
 
 -- Get all the active pieces, since we use a Map, this is just all the values
 activePieces :: GameState -> [Piece]
 activePieces game = elems (board game)
 
+-- Get all the active pieces, of the current turn
 currentTurnPieces :: GameState -> [Piece]
 currentTurnPieces game =
   Data.List.filter (\p -> color p == turn game) (activePieces game)
@@ -159,65 +174,71 @@ occupantColor b pos = case lookup pos b of
 move :: GameState -> Position -> Position -> GameState
 move game start end = case lookup start (board game) of
   Nothing -> game
-  -- This is not correct, I have no idea how to use the update/delete functions
   Just p  -> do
-    let newBoard = Data.Map.update
-          (const Nothing)
-          start
-          (Data.Map.update (\_ -> Just p) end (board game))
+    let newBoard = Data.Map.update (const Nothing)
+                                   start
+                                   (Data.Map.insert end p (board game))
     Game { board = newBoard, turn = nextColor (turn game) }
 
-stateToString :: GameState -> String
-stateToString game = do
-  let p0 = showMPiece (lookup C0 (board game))
-  let p1 = showMPiece (lookup C1 (board game))
-  let p2 = showMPiece (lookup C2 (board game))
-  let p3 = showMPiece (lookup C3 (board game))
-  let p4 = showMPiece (lookup C4 (board game))
-  let p5 = showMPiece (lookup C5 (board game))
-  let p6 = showMPiece (lookup C6 (board game))
-  let p7 = showMPiece (lookup C7 (board game))
+instance Display GameState where
+  display game = do
+    let p0 = showMPiece (lookup C0 (board game))
+    let p1 = showMPiece (lookup C1 (board game))
+    let p2 = showMPiece (lookup C2 (board game))
+    let p3 = showMPiece (lookup C3 (board game))
+    let p4 = showMPiece (lookup C4 (board game))
+    let p5 = showMPiece (lookup C5 (board game))
+    let p6 = showMPiece (lookup C6 (board game))
+    let p7 = showMPiece (lookup C7 (board game))
 
-  let t  = turn game
+    let t  = turn game
 
-  "" ++ display t ++ ": " ++ p0 ++ p1 ++ p2 ++ p3 ++ p4 ++ p5 ++ p6 ++ p7 ++ ""
+    ""
+      ++ display t
+      ++ ": "
+      ++ p0
+      ++ p1
+      ++ p2
+      ++ p3
+      ++ p4
+      ++ p5
+      ++ p6
+      ++ p7
+      ++ ""
 
+-- Parse helper to parse each individual Char (Text) 
 parseSplitString :: [Text] -> GameState
 parseSplitString text = Game { turn  = parse (unpack (Data.List.head text))
                              , board = parseBoard (text !! 1)
                              }
 
-splitStateString :: Text -> [Text]
-splitStateString = splitOn (pack ": ")
+instance Parse GameState where
+  parse str = parseSplitString (splitOn (pack ": ") (pack str))
 
-stringToState :: String -> GameState
-stringToState str = parseSplitString (splitStateString (pack str))
-
+-- Returns true if the current player can move ANY piece to the provided position
 filterMove :: GameState -> Position -> Bool
 filterMove game pos = case lookup pos (board game) of
   Nothing -> True
   Just p  -> color p /= turn game
 
+-- Returns a list of valid positions for ANY piece, i.e. each output location is a valid place the SOME piece can move to
 filterMoves :: GameState -> [Maybe Position] -> [Position]
 filterMoves game positions =
   Prelude.filter (filterMove game) (catMaybes positions)
 
-rookMovesRight :: GameState -> Position -> [Position]
-rookMovesRight game current = do
-  let next = nextPosition current
+-- Helper to recursively collect positions that a rook can move to
+rookMovesHelper
+  :: (Position -> Maybe Position) -> GameState -> Position -> [Position]
+rookMovesHelper f game current = do
+  let next = f current
   case (\x -> lookup x (board game)) =<< next of
-    Nothing -> maybe [] (\x -> x : rookMovesRight game x) next
+    Nothing -> maybe [] (\x -> x : rookMovesHelper f game x) next
     Just p  -> maybe [] (\x -> [ x | turn game /= color p ]) next
 
-rookMovesLeft :: GameState -> Position -> [Position]
-rookMovesLeft game current = do
-  let next = prevPosition current
-  case (\x -> lookup x (board game)) =<< next of
-    Nothing -> maybe [] (\x -> x : rookMovesLeft game x) next
-    Just p  -> maybe [] (\x -> [ x | turn game /= color p ]) next
-
+-- Get all moves a rook can move to
 rookMoves :: GameState -> Position -> [Position]
-rookMoves game pos = rookMovesLeft game pos ++ rookMovesRight game pos
+rookMoves game pos =
+  rookMovesHelper prevPosition game pos ++ rookMovesHelper nextPosition game pos
 
 -- Part 2
 -- Rules
@@ -249,41 +270,51 @@ potentialSquaresTurn :: GameState -> [Position]
 potentialSquaresTurn game =
   Data.List.concatMap (potentialSquares game) (currentTurnPieces game)
 
--- Checks if the King can be captures by the player who's turn it is
+-- Checks if the other persons King can be captured currently
 kingInCheck :: GameState -> Bool
-kingInCheck game = not
-  (Prelude.null
-    (potentialSquaresTurn game `intersect` catMaybes
-      [piecePosition game (Piece { ty = King, color = turn game })]
-    )
-  )
+kingInCheck game = do
+  let yourKing =
+        piecePosition game (Piece { ty = King, color = nextColor (turn game) })
+  case yourKing of
+    Nothing -> False
+    Just p  -> p `elem` potentialSquaresTurn game
 
+-- Get all potential moves for a specific piece
 potentialMoves :: GameState -> Piece -> [(Position, Position)]
 potentialMoves game piece =
   maybe [] (potentialMovePos game) (piecePosition game piece)
 
+-- Get all potential moves for the current turn
 potentialMovesTurn :: GameState -> [(Position, Position)]
 potentialMovesTurn game =
   Data.List.concatMap (potentialMoves game) (currentTurnPieces game)
 
+-- A move is legal if the king of the person who just went is not in check
 isLegal :: GameState -> Bool
-isLegal game =
-  isJust (piecePosition game Piece { color = nextColor (turn game), ty = King })
+isLegal game = not (kingInCheck game)
 
-isOver :: GameState -> Bool
-isOver game =
-  isNothing (piecePosition game Piece { color = turn game, ty = King })
-
+-- Collect all legal moves from a given state
 legalMoves :: GameState -> [GameState]
 legalMoves game = Data.List.filter
   isLegal
   (Data.List.map (uncurry (move game)) (potentialMovesTurn game))
 
+-- Constant Initial Position
 initialPosition :: GameState
-initialPosition = stringToState "W: KNR--rnk"
+initialPosition = parse "W: KNR--rnk"
 
-countStatesHelper :: [GameState] -> Integer
-countStatesHelper = Data.List.foldr ((+) . countStates) 0
+-- Part 4 Recursion
 
-countStates :: GameState -> Integer
-countStates game = 1 + countStatesHelper (legalMoves game)
+-- Recursive Helper to count possible outcome states from a list of states
+countStatesHelper :: [GameState] -> [GameState] -> (Int, [GameState])
+countStatesHelper visited  []             = (0, visited)
+countStatesHelper previous (game : games) = do
+  let new = Data.List.filter
+        (\x -> x `notElem` previous && x `notElem` games)
+        (legalMoves game)
+  let (c, res) = countStatesHelper (game : previous) (games ++ new)
+  (c + 1, res)
+
+-- Count all the possible states that are reachable from a provided state, and return all the states
+countStates :: GameState -> (Int, [GameState])
+countStates game = countStatesHelper [] [game]
