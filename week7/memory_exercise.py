@@ -1,8 +1,4 @@
-import ast
-import sys
-import os
 from typing import Any, Dict, List, Tuple
-
 
 Memory = List[int]
 
@@ -61,12 +57,13 @@ def initializeMemory(type_info: Dict[str, str]) -> Memory:
     for (k, ty) in type_info.items():
         type_info[k] = (totalSpace, ty)
         totalSpace += get_size(ty)
-    return [0] * totalSpace  # initialize the memory to something as small as possible
+    return [
+        0
+    ] * totalSpace  # initialize the memory to something as small as possible
 
 
-def writeToMemory(
-    type_info: Dict[str, str], values: Dict[str, Any], mem: Memory
-) -> Memory:
+def writeToMemory(type_info: Dict[str, str], values: Dict[str, Any],
+                  mem: Memory) -> Memory:
     # use of global variables is not allowed!
     for (k, v) in values.items():
         memory = convert_to_memory(v)
@@ -85,7 +82,7 @@ def readFromMemory(type_info: Dict[str, str], mem: Memory) -> Dict[str, Any]:
     res = {}
     for (k, data) in type_info.items():
         (offset, ty) = data
-        value = mem[offset : offset + get_size(ty) + 1]
+        value = mem[offset:offset + get_size(ty) + 1]
         retrieved = convert_from_memory(ty, value)
         res[k] = retrieved
     return res
@@ -99,12 +96,12 @@ def checkValidMemory(memory: Memory) -> Memory:
     for i in memory:
         ok = isinstance(i, int)
         if not ok:
-            raise (RuntimeError("Invalid memory, element not an int: {}".format(i)))
+            raise (RuntimeError(
+                "Invalid memory, element not an int: {}".format(i)))
         ok = i >= 0 and i < pow(2, 32)
         if not ok:
-            raise (
-                RuntimeError("Invalid memory, integer element not a word: {}".format(i))
-            )
+            raise (RuntimeError(
+                "Invalid memory, integer element not a word: {}".format(i)))
 
 
 def runSingleTest(type_info, data_list, constantSize):
@@ -121,9 +118,8 @@ def runSingleTest(type_info, data_list, constantSize):
         memData = readFromMemory(type_info, mem)
         for k, v in allData.items():
             if not (type(memData[k]) == type(v) and memData[k] == v):
-                raise (
-                    RuntimeError("The value of {} wasn't retrieved properly".format(k))
-                )
+                raise (RuntimeError(
+                    "The value of {} wasn't retrieved properly".format(k)))
     return True
 
 
@@ -135,7 +131,15 @@ def testSet():
     runSingleTest(type_info, [data], True)
     # Example 1b: plain int values, incremental updates
     type_info = {"x": "int", "y": "int", "z": "int"}
-    runSingleTest(type_info, [{"x": 3, "z": 50}, {"y": 200, "z": 50}, {"z": 20}], True)
+    runSingleTest(type_info, [{
+        "x": 3,
+        "z": 50
+    }, {
+        "y": 200,
+        "z": 50
+    }, {
+        "z": 20
+    }], True)
     # Example 1a: plain char values, write once
     type_info = {"x": "char", "y": "char", "z": "char"}
     data = {"x": "3", "y": "a", "z": "x"}
