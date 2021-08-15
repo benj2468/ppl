@@ -2,6 +2,7 @@ from typing import Tuple
 import decimal
 from copy import deepcopy
 from enum import Enum
+from math import ceil, floor
 
 
 class Operation(Enum):
@@ -39,7 +40,7 @@ class OffByOne:
             prec += 1
             (low, high) = self.bounds_with_precision(prec)
 
-        return f"{round(low)}±1"
+        return f"{floor(high)}±1"
 
     # Create a bounds_with_precision(prec) method that will return
     # a lower and upper-bound Decimal value.
@@ -100,9 +101,15 @@ class Exact(OffByOne):
 
 
 def runTests():
-    print(
-        (OffByOne(3) + OffByOne(0.25) - OffByOne(10**10) + OffByOne(10**10)) *
-        OffByOne(3))
+    assert (
+        ((OffByOne(3) + OffByOne(0.25) - OffByOne(10**10) + OffByOne(10**10)) *
+         OffByOne(3))).__repr__() == "9±1"
+
+    assert ((OffByOne(3) * OffByOne(0.25)).__repr__() == "1±1")
+
+    assert (OffByOne(0.3).__repr__() == "0±1")
+
+    assert ((OffByOne(10.453) + OffByOne(.532)).__repr__() == "11±1")
 
     print("ran all tests. 🚀")
 
