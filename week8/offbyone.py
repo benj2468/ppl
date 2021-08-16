@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Tuple
 import decimal
 from copy import deepcopy
@@ -6,32 +7,67 @@ from math import ceil, floor
 
 
 class Operation(Enum):
-    Add = 1,
-    Sub = 2,
-    Mul = 3
+    Add = lambda a, b: (a[0] + b[0], a[1] + b[1])
+    Sub = lambda a, b: (a[0] - b[0], a[1] - b[1])
+    Mul = lambda a, b: (min(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[
+        1]), max(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[1]))
+    Div = lambda a, b: (a[0] / b[1], a[1] / b[0])
+
+
+class OperationNode:
+    @classmethod
+    def leaf(self, leaf) -> OperationNode:
+        node = OperationNode()
+        node.node = leaf
+        return node
+
+    @classmethod
+    def tree(self, left, right, op: Operation) -> OperationNode:
+        node = OperationNode()
+        node.node = None
+        node.left = left
+        node.right = right
+        node.op = op
+        return node
+
+    def is_leaf(self) -> bool:
+        return self.node != None
+
+    def calculate(self):
+        a = self.left.bounds()
+        b = self.right.bounds()
+        return self.op(a, b)
 
 
 class OffByOne:
     def __init__(self, i) -> None:
-        self.initial = i
         self.precision = 1
+        self.node: OperationNode = OperationNode.leaf(i)
 
-        self.op = None
+    @classmethod
+    def op(self, left: OffByOne, right: OffByOne, op: Operation) -> None:
+        node = OffByOne(left)
+        node.node = OperationNode.tree(left, right, op)
+        return node
 
-    def __add__(self, rhs):
+    def __add__(self, rhs: OffByOne) -> OffByOne:
         return self.operation(rhs, Operation.Add)
 
-    def __sub__(self, rhs):
+    def __sub__(self, rhs: OffByOne) -> OffByOne:
         return self.operation(rhs, Operation.Sub)
 
-    def __mul__(self, rhs):
+    def __mul__(self, rhs: OffByOne) -> OffByOne:
         return self.operation(rhs, Operation.Mul)
 
-    def operation(self, rhs, op):
-        new = deepcopy(self)
-        new.initial = (self, rhs)
-        new.op = op
-        return new
+    def __truediv__(self, rhs: OffByOne) -> OffByOne:
+        return self.operation(rhs, Operation.Div)
+
+    def with_precision(self, precision: int) -> OffByOne:
+        self.precision = precision
+        return self
+
+    def operation(self, rhs: OffByOne, op: Operation):
+        return OffByOne.op(self, rhs, op).with_precision(self.precision)
 
     def __repr__(self) -> str:
         prec = 1
@@ -58,25 +94,12 @@ class OffByOne:
 
     def update_precision(self, precision: int):
         self.precision = precision
-        if isinstance(self.initial, tuple):
-            if self.initial[0]: self.initial[0].update_precision(precision)
-            if self.initial[1]: self.initial[1].update_precision(precision)
+        if not self.node.is_leaf():
+            self.node.left.update_precision(precision)
+            self.node.right.update_precision(precision)
 
-    def bounds(self):
-        if isinstance(self.initial, tuple):
-            a = self.initial[0].bounds()
-            b = self.initial[1].bounds()
-            if self.op == Operation.Add:
-                return (a[0] + b[0], a[1] + b[1])
-            elif self.op == Operation.Sub:
-                return (a[0] - b[0], a[1] - b[1])
-            elif self.op == Operation.Mul:
-                new_low = min(a[0] * b[0], a[1] * b[0], a[0] * b[1],
-                              a[1] * b[1])
-                new_high = max(a[0] * b[0], a[1] * b[0], a[0] * b[1],
-                               a[1] * b[1])
-                return (new_low, new_high)
-        else:
+    def bounds(self) -> Tuple[decimal.Decimal, decimal.Decimal]:
+        if self.node.is_leaf():
             if self.precision == 1:
                 delta = 1
             else:
@@ -85,19 +108,12 @@ class OffByOne:
                     delta += '0'
                 delta += "1"
                 delta = float(delta)
-            low = decimal.Decimal(self.initial) - decimal.Decimal(delta)
-            high = decimal.Decimal(self.initial) + decimal.Decimal(delta)
+
+            low = decimal.Decimal(self.node.node) - decimal.Decimal(delta)
+            high = decimal.Decimal(self.node.node) + decimal.Decimal(delta)
             return (low, high)
-
-
-class Exact(OffByOne):
-    def __init__(self, i) -> None:
-        if round(i) != i:
-            raise "Exact value MUST be an integer"
-        super()
-
-    def bounds(self):
-        (decimal.Decimal(super.i), decimal.Decimal(super.i))
+        else:
+            return self.node.calculate()
 
 
 def runTests():
@@ -110,6 +126,8 @@ def runTests():
     assert (OffByOne(0.3).__repr__() == "0±1")
 
     assert ((OffByOne(10.453) + OffByOne(.532)).__repr__() == "11±1")
+
+    assert ((OffByOne(1) / OffByOne(3)).__repr__() == "1±1")
 
     print("ran all tests. 🚀")
 
