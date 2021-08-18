@@ -1,9 +1,8 @@
 from __future__ import annotations
 from typing import Tuple
 import decimal
-from copy import deepcopy
 from enum import Enum
-from math import ceil, floor
+from math import floor
 
 
 class Operation(Enum):
@@ -15,35 +14,38 @@ class Operation(Enum):
 
 
 class OperationNode:
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self._op(*args, **kwds)
+
     @classmethod
     def leaf(self, leaf) -> OperationNode:
         node = OperationNode()
-        node.node = leaf
+        node._node = leaf
         return node
 
     @classmethod
     def tree(self, left, right, op: Operation) -> OperationNode:
         node = OperationNode()
-        node.node = None
-        node.left = left
-        node.right = right
-        node.op = op
+        node._node = None
+        node._left = left
+        node._right = right
+        node._op = op
         return node
 
     def is_leaf(self) -> bool:
-        return self.node != None
+        return self._node != None
+
+    def get_node(self):
+        return self._node
+
+    def get_branches(self):
+        return (self._left, self._right)
 
 
 class OffByOne:
     def __init__(self, i) -> None:
         self._precision = 1
         self._node: OperationNode = OperationNode.leaf(i)
-
-    @classmethod
-    def op(self, left: OffByOne, right: OffByOne, op: Operation) -> None:
-        node = OffByOne(left)
-        node._node = OperationNode.tree(left, right, op)
-        return node
 
     def __add__(self, rhs: OffByOne) -> OffByOne:
         return self.operation(rhs, Operation.Add)
@@ -71,7 +73,9 @@ class OffByOne:
         return self
 
     def operation(self, rhs: OffByOne, op: Operation) -> OffByOne:
-        return OffByOne.op(self, rhs, op).with_precision(self._precision)
+        offByOp = OffByOne(self)
+        offByOp._node = OperationNode.tree(self, rhs, op)
+        return offByOp.with_precision(self._precision)
 
     def bounds_with_precision(
             self, precision: int) -> Tuple[decimal.Decimal, decimal.Decimal]:
@@ -83,11 +87,13 @@ class OffByOne:
     def update_precision(self, precision: int) -> None:
         self._precision = precision
         if not self._node.is_leaf():
-            self._node.left.update_precision(precision)
-            self._node.right.update_precision(precision)
+            (left, right) = self._node.get_branches()
+            left.update_precision(precision)
+            right.update_precision(precision)
 
     def bounds(self) -> Tuple[decimal.Decimal, decimal.Decimal]:
-        if self._node.is_leaf():
+        node = self._node.get_node()
+        if node:
             if self._precision == 1:
                 delta = 1
             else:
@@ -97,13 +103,14 @@ class OffByOne:
                 delta += "1"
             delta = float(delta)
 
-            low = decimal.Decimal(self._node.node) - decimal.Decimal(delta)
-            high = decimal.Decimal(self._node.node) + decimal.Decimal(delta)
+            low = decimal.Decimal(node) - decimal.Decimal(delta)
+            high = decimal.Decimal(node) + decimal.Decimal(delta)
             return (low, high)
         else:
-            a = self._node.left.bounds()
-            b = self._node.right.bounds()
-            return self._node.op(a, b)
+            (left, right) = self._node.get_branches()
+            a = left.bounds()
+            b = right.bounds()
+            return self._node(a, b)
 
 
 def runTests():
