@@ -100,8 +100,8 @@ class OffByOne:
 
     def bounds(self) -> Tuple[Decimal, Decimal]:
         node = self._node.get_node()
+        getcontext().prec = self._precision
         if node:
-            getcontext().prec = self._precision
             getcontext().rounding = ROUND_FLOOR
             low = Decimal(node)
             getcontext().rounding = ROUND_CEILING
