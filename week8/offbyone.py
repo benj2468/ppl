@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Tuple
-import decimal
+from decimal import *
 from enum import Enum
 from math import floor
 
@@ -14,8 +14,15 @@ class Operation(Enum):
 
 
 class OperationNode:
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return self._op(*args, **kwds)
+    def __call__(
+        self,
+        *args: Any,
+    ) -> Any:
+        getcontext().rounding = ROUND_FLOOR
+        low = self._op(*args)[0]
+        getcontext().rounding = ROUND_CEILING
+        high = self._op(*args)[1]
+        return (low, high)
 
     @classmethod
     def leaf(self, leaf) -> OperationNode:
@@ -77,34 +84,28 @@ class OffByOne:
         offByOp._node = OperationNode.tree(self, rhs, op)
         return offByOp.with_precision(self._precision)
 
-    def bounds_with_precision(
-            self, precision: int) -> Tuple[decimal.Decimal, decimal.Decimal]:
+    def bounds_with_precision(self, precision: int) -> Tuple[Decimal, Decimal]:
         if precision < 1:
             raise "Precision must be >= 1"
         self.update_precision(precision)
         return self.bounds()
 
     def update_precision(self, precision: int) -> None:
-        self._precision = precision
+        if self._precision < precision:
+            self._precision = precision
         if not self._node.is_leaf():
             (left, right) = self._node.get_branches()
             left.update_precision(precision)
             right.update_precision(precision)
 
-    def bounds(self) -> Tuple[decimal.Decimal, decimal.Decimal]:
+    def bounds(self) -> Tuple[Decimal, Decimal]:
         node = self._node.get_node()
         if node:
-            if self._precision == 1:
-                delta = 1
-            else:
-                delta = "0."
-                for _ in range(1, self._precision - 1):
-                    delta += '0'
-                delta += "1"
-            delta = float(delta)
-
-            low = decimal.Decimal(node) - decimal.Decimal(delta)
-            high = decimal.Decimal(node) + decimal.Decimal(delta)
+            getcontext().prec = self._precision
+            getcontext().rounding = ROUND_FLOOR
+            low = Decimal(node)
+            getcontext().rounding = ROUND_CEILING
+            high = Decimal(node)
             return (low, high)
         else:
             (left, right) = self._node.get_branches()
@@ -118,13 +119,16 @@ def runTests():
         ((OffByOne(3) + OffByOne(0.25) - OffByOne(10**10) + OffByOne(10**10)) *
          OffByOne(3))).__repr__() == "9±1"
 
-    assert ((OffByOne(3) * OffByOne(0.25)).__repr__() == "1±1")
+    assert ((OffByOne(3) * OffByOne(0.25)).__repr__() == "0±1")
 
     assert (OffByOne(0.3).__repr__() == "0±1")
 
     assert ((OffByOne(10.453) + OffByOne(.532)).__repr__() == "11±1")
 
-    assert ((OffByOne(1) / OffByOne(3)).__repr__() == "1±1")
+    assert ((OffByOne(1) / OffByOne(3)).__repr__() == "0±1")
+
+    assert ((OffByOne(3) + OffByOne(0.25) - OffByOne(10**100) +
+             OffByOne(10**100)).__repr__() == "4±1")
 
     print("ran all tests. 🚀")
 
