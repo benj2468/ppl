@@ -5,12 +5,22 @@ from enum import Enum
 from math import floor
 
 
+class Bounds(Enum):
+    Low = 0
+    High = 1
+
+
+def operation_switch(op, bound: Bounds):
+    return op.value[bound.value]
+
+
 class Operation(Enum):
-    Add = lambda a, b: (a[0] + b[0], a[1] + b[1])
-    Sub = lambda a, b: (a[0] - b[0], a[1] - b[1])
-    Mul = lambda a, b: (min(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[
-        1]), max(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[1]))
-    Div = lambda a, b: (a[0] / b[1], a[1] / b[0])
+    Add = (lambda a, b: (a[0] + b[0]), lambda a, b: (a[1] + b[1]))
+    Sub = (lambda a, b: (a[0] - b[0]), lambda a, b: a[1] - b[1])
+    Mul = (
+        lambda a, b: (min(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[1])),
+        lambda a, b: max(a[0] * b[0], a[1] * b[0], a[0] * b[1], a[1] * b[1]))
+    Div = (lambda a, b: a[0] / b[1], lambda a, b: a[1] / b[0])
 
 
 class OperationNode:
@@ -19,9 +29,9 @@ class OperationNode:
         *args: Any,
     ) -> Any:
         getcontext().rounding = ROUND_FLOOR
-        low = self._op(*args)[0]
+        low = operation_switch(self._op, Bounds.Low)(*args)
         getcontext().rounding = ROUND_CEILING
-        high = self._op(*args)[1]
+        high = operation_switch(self._op, Bounds.High)(*args)
         return (low, high)
 
     @classmethod
