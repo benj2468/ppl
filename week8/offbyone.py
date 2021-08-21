@@ -33,6 +33,14 @@ class OperationNode:
         high = operation_switch(self._op, Bounds.High)(*args)
         return (low, high)
 
+    def __eq__(self, o: object) -> bool:
+        if self.is_leaf() and o.is_leaf():
+            return self._node == o._node
+        elif not self.is_leaf() and not o.is_leaf():
+            return self._op == o._op and self._left == o._left and self._right == o._right
+        else:
+            return False
+
     @classmethod
     def leaf(self, leaf) -> OperationNode:
         node = OperationNode()
@@ -74,6 +82,9 @@ class OffByOne:
 
     def __truediv__(self, rhs: OffByOne) -> OffByOne:
         return self.operation(rhs, Operation.Div)
+
+    def __eq__(self, o: object) -> bool:
+        return self._node == o._node
 
     def __repr__(self) -> str:
         prec = 1
@@ -119,7 +130,11 @@ class OffByOne:
         else:
             (left, right) = self._node.get_branches()
             a = left.bounds()
-            b = right.bounds()
+
+            if left._node == right._node:
+                b = a
+            else:
+                b = right.bounds()
             return self._node(a, b)
 
 
