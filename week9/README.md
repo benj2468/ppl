@@ -8,7 +8,9 @@ For this weeks Assignment I have written 3 different attribute macros that provi
 
 ## Testing
 
-Testing is run by running `cargo test`. If you don't have `cargo` installed, simply run `brew install rustup` and that should do the trick. The tests can be seen in [`week9/test/test.rs`](./test/test.rs)
+Testing is run by running `cargo test -- --nocapture`. If you don't have `cargo` installed, simply run `brew install rustup` and that should do the trick. The tests can be seen in [`week9/test/test.rs`](./test/test.rs)
+
+You can also use the `Makefile` to install necessary tools, and then test.
 
 ## Now for descriptions of each macro
 
