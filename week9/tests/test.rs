@@ -7,6 +7,11 @@ pub fn test_timer() {
 }
 
 #[test]
+pub fn test_timer_file() {
+    timer_file()
+}
+
+#[test]
 pub fn test_timer_and_field() {
     // Should print a timestamp, AND should perform the mod calculation
     assert_eq!(timer(2), 4);
@@ -52,6 +57,14 @@ pub fn timer(a: u32) -> u32 {
     r
 }
 
+#[time_it("timer_file.txt")]
+pub fn timer_file() {
+    let mut i = 0;
+    for _ in 0..100000 {
+        i += 1;
+    }
+    assert!(i > 0)
+}
 #[cached]
 pub fn cacher(a: u32) -> u32 {
     a % 2

@@ -9,7 +9,7 @@ use std::{
 use syn::parse_quote;
 
 #[proc_macro_attribute]
-pub fn time_it(_attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn time_it(attr: TokenStream, input: TokenStream) -> TokenStream {
     let item = syn::parse(input).unwrap();
 
     if let syn::Item::Fn(syn::ItemFn {
@@ -25,6 +25,28 @@ pub fn time_it(_attr: TokenStream, input: TokenStream) -> TokenStream {
             &format!("{}_start_instant", func_name.to_string().to_snake_case()),
             func_name.span(),
         );
+
+        let write = if let Some(TokenTree::Literal(lit)) = attr.into_iter().next() {
+            let attribute = lit.to_string();
+            let split = attribute.split('"').into_iter().collect::<Vec<_>>();
+            let file_name = split.get(1).unwrap();
+
+            quote! {
+                use std::io::Write;
+                let mut file = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&#file_name)
+                    .expect(&format!("Could not open/create file: {}", #file_name));
+                file.write_all(format!("[{}]: {:?}", #name_str, std::time::Instant::now().duration_since(#start_time)).as_bytes()).expect("Error writing duration log to file");
+            }
+            // quote! {}
+        } else {
+            quote! {
+                println!("Duration [{}]: {:?}", #name_str, std::time::Instant::now().duration_since(#start_time));
+            }
+        };
+
         TokenStream::from(quote! {
             #(#attrs)*
             #vis #sig {
@@ -32,7 +54,7 @@ pub fn time_it(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
                 let res = #block;
 
-                println!("Duration [{}]: {:?}", #name_str, std::time::Instant::now().duration_since(#start_time));
+                #write
 
                 res
             }
@@ -43,8 +65,14 @@ pub fn time_it(_attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn cached(_attr: TokenStream, input: TokenStream) -> TokenStream {
+pub fn cached(attr: TokenStream, input: TokenStream) -> TokenStream {
     let item = syn::parse(input.clone()).unwrap();
+
+    let file_name = if let Some(TokenTree::Literal(lit)) = attr.into_iter().next() {
+        Some(lit.to_string())
+    } else {
+        None
+    };
 
     if let syn::Item::Fn(syn::ItemFn {
         attrs,
@@ -62,7 +90,8 @@ pub fn cached(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
         let func_name = &sig.ident;
         let func_str = func_name.to_string();
-        let cacher_file = format!("./.{}_cacher.json", &func_str.to_snake_case());
+        let cacher_file =
+            file_name.unwrap_or_else(|| format!("./.{}_cacher.json", &func_str.to_snake_case()));
         let cache_struct = Ident::new(
             &format!("{}Cacher", func_name.to_string().to_camel_case()),
             func_name.span(),
