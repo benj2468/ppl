@@ -54,6 +54,11 @@ pub fn timer1(a: u32) -> u64 {
 pub fn timer(a: u32) -> u32 {
     #[field]
     let r = a.pow(2);
+    println!("{:?}", r);
+    let plus = a + 5;
+    println!("{:?}", plus);
+    // let b = r == ((a + 5) * (a + 5));
+    // println!("{:?}", b);
     r
 }
 

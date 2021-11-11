@@ -1,12 +1,12 @@
 use heck::{CamelCase, SnakeCase};
 use proc_macro::{TokenStream, TokenTree};
 use proc_macro2::Ident;
-use quote::quote;
+use quote::{quote, ToTokens};
 use std::{
     collections::hash_map::RandomState,
     hash::{BuildHasher, Hash, Hasher},
 };
-use syn::parse_quote;
+use syn::{parse_quote, BinOp, ExprBinary};
 
 #[proc_macro_attribute]
 pub fn time_it(attr: TokenStream, input: TokenStream) -> TokenStream {
@@ -183,7 +183,27 @@ pub fn cached(attr: TokenStream, input: TokenStream) -> TokenStream {
 fn fix_operation_generator(p: u32, expr: &syn::Expr) -> syn::Expr {
     let expr = expr.clone();
     match expr {
-        syn::Expr::Binary(a) => parse_quote!((#a) % #p),
+        syn::Expr::Binary(mut a) => match a.op {
+            BinOp::Eq(_)
+            | BinOp::Ge(_)
+            | BinOp::Gt(_)
+            | BinOp::Le(_)
+            | BinOp::Lt(_)
+            | BinOp::Ne(_)
+            | BinOp::Or(_)
+            | BinOp::Rem(_)
+            | BinOp::RemEq(_)
+            | BinOp::Shl(_)
+            | BinOp::ShlEq(_)
+            | BinOp::Shr(_)
+            | BinOp::ShrEq(_) => {
+                a.left = Box::new(fix_operation_generator(p, a.left.as_ref()));
+                a.right = Box::new(fix_operation_generator(p, a.right.as_ref()));
+
+                syn::Expr::Binary(a)
+            }
+            _ => parse_quote!((#a) % #p),
+        },
         syn::Expr::Array(mut a) => {
             a.elems = a
                 .elems

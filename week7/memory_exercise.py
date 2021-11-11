@@ -21,8 +21,7 @@ def convert_to_memory(value: Any) -> List[int]:
         if isinstance(value, list):
             res = []
             for x in value:
-                r = convert_to_memory(x)
-                res += r
+                res += convert_to_memory(x)
             return res
         elif isinstance(value, int):
             return [value]
